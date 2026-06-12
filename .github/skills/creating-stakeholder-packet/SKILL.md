@@ -7,7 +7,7 @@ description: Use when a delivery run needs a Stakeholder Input Packet and none e
 
 ## Overview
 
-The packet (template: `stakeholder-input-packet.md` at the repo root, sections §1–§17) is the sole source of business truth for the entire agent pipeline. Core principle: **nothing enters the packet that the stakeholder did not say or explicitly confirm.** This skill extracts the packet through an interview. It never authors business truth — a drafted rule the stakeholder never confirmed is corrupted input that every downstream agent will faithfully build on.
+The packet (template: `templates/stakeholder-input-packet.md`, sections §1–§17) is the sole source of business truth for the entire agent pipeline. Core principle: **nothing enters the packet that the stakeholder did not say or explicitly confirm.** This skill extracts the packet through an interview. It never authors business truth — a drafted rule the stakeholder never confirmed is corrupted input that every downstream agent will faithfully build on.
 
 ## When to Use
 
@@ -41,7 +41,7 @@ digraph interview_loop {
 
 ## Phase 1 — Intake & Mapping
 
-1. Read the template `stakeholder-input-packet.md` in full first — its prompts AND its worked example set the expected level of detail.
+1. Read the template `templates/stakeholder-input-packet.md` in full first — its prompts AND its worked example set the expected level of detail.
 2. Collect whatever input exists. Quote-map every stakeholder statement to a section §1–§17.
 3. Mark each section: **FILLED** = its template prompt could be answered without further asking; **PARTIAL** = statements map to it but fall short of the template's detail; **EMPTY** = nothing maps. List every hedge and contradiction separately — each must be resolved by a question, never hardened into a fact.
 4. Persist the map, the hedge/contradiction lists, and the pending question queue to `packet-interview-state.md` next to the intended packet destination. This file is working state, never the packet; resume an interrupted interview from it. An unconfirmed packet is never saved as the packet — if the stakeholder becomes unavailable, the work stays in this file.
