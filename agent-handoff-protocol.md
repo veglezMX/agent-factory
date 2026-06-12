@@ -137,7 +137,7 @@ notes: ...
 
 - A `rejected` gate routes back to the producing agent with the rejection notes as a new inbound handoff.
 - `approved-with-conditions` lets the run proceed; each condition becomes a tracked risk that must be closed before Gate 3.
-- **Mid-run scope change re-opens Gate 1.** The amendment flows: packet amendment → Requirements Analyst delta review → Gate 1 re-approval → Bundle Compiler delta → Intake Validator. Implementers never absorb scope changes directly from chat.
+- **Mid-run scope change re-opens Gate 1.** The amendment flows: packet amendment → Requirements Analyst delta review → Gate 1 re-approval → Bundle Compiler delta → Intake Validator. Implementers never absorb scope changes directly from chat. A request too large for an amendment queues as the next increment run (§6.6).
 
 ---
 
@@ -167,7 +167,73 @@ Long runs die from context exhaustion before they die from bad decisions. Three 
 
 ---
 
-## 6. Conformance Checklist for Agent Authors
+## 6. Increment Runs
+
+A released product grows through **increment runs**. A new feature (a new module, a new journey, a new capability) is never absorbed into a closed run and never delivered from chat: it is a full run with its own run-id, its own workspace (§1), and its own gates. The roster and this protocol are unchanged; only the inputs shrink to the delta.
+
+### 6.1 Entry criteria — one run at a time
+
+**A new run MUST NOT open while the previous run is unclosed.** The Orchestrator refuses to issue handoff `0001` for an increment until every criterion below holds. This is deliberate: every feature is *finished* — released or formally cancelled, with no dangling risk — before the next one starts. There is no "we'll fix it in the next increment."
+
+A run is **closed** when all of the following are true:
+
+1. **Gate 3 is `approved`** and signed in `gates/gate-3-release.md` — or the run is formally cancelled (§6.4).
+2. **Every risk ID is terminal**: resolved by a handoff that references it, or formally accepted with the gate approver's name (§2.3). Zero open risks survive a closed run.
+3. **Every gate condition is closed.** Conditions from `approved-with-conditions` gates became tracked risks (§3.3) and therefore fall under criterion 2.
+4. **Zero unanswered `open_questions`** remain in the final `state.md`.
+
+The first handoff of an increment run must cite the closure evidence: the prior run's Gate 3 record (or cancellation record) and its final `state.md` showing zero open risks and questions. An increment handoff without this citation is invalid; the receiving agent refuses it, exactly as it would refuse work with no inbound handoff at all.
+
+### 6.2 Delta packet
+
+`00-packet/` of an increment run holds a **delta packet**, not a copy of the original:
+
+```yaml
+---
+packet: delta
+baseline_run: 2026-06-comedor-mvp        # the closed run this builds on
+baseline_artifacts:                      # canonical docs in force (§6.3)
+  - docs/architecture.md
+  - docs/glossary.md
+  - docs/requirements.md
+---
+```
+
+- The delta packet covers **only the new scope** — new roles, journeys, features, business rules — plus any shipped behavior it intentionally changes, stated explicitly.
+- It is frozen under the same rule as any packet (§1). Mid-run changes to an increment produce amendments, same as §3.3.
+
+### 6.3 Canonical artifacts
+
+Run directories hold *changes*; the repository holds the *current truth*. At Gate 3 of every run, the Orchestrator promotes the run's requirements, glossary, architecture, and contract updates into canonical locations in the repository proper (e.g. `docs/`). Without this step, increment N+1 has no single baseline to diff against.
+
+Increment runs therefore differ from a first run in three places:
+
+- **Requirements Analyst performs a delta review**: new requirements are checked against the canonical requirements and glossary. A contradiction with shipped behavior becomes an `open_questions` entry — never a silent override.
+- **Architecture Guardian reviews design impact against the canonical architecture**, not greenfield. Its findings name which existing components the increment touches.
+- **Bundle Compiler emits only new and changed tasks**; unchanged shipped behavior is out of bundle scope.
+
+### 6.4 Cancellation — the only exit besides success
+
+A run that will not release is closed only by a **cancellation record** in `gates/`, same format as a gate record with `decision: cancelled`, signed by the Gate 3 approver named in the packet. Cancellation does not waive criterion 2 of §6.1: every open risk must still be resolved or formally accepted by name before the record is signed. A cancelled run unblocks the next run; its accepted risks remain on permanent record.
+
+### 6.5 Accepted-risk resurfacing
+
+Closed runs leave formally accepted risks behind. Acceptance does not transfer across runs: if an increment touches the area of a previously accepted risk, the first agent to detect it raises a **new risk ID referencing the old one** (e.g. `supersedes: R-011 @ 2026-06-comedor-mvp`), and the new run's gate approver must re-accept or resolve it. Old acceptances never silently cover new work.
+
+### 6.6 Mid-run feature requests
+
+A feature requested while a run is active has exactly two paths:
+
+| Path | When | Mechanism |
+|---|---|---|
+| Fold into the current run | The feature is inseparable from in-flight scope | §3.3 packet amendment — re-opens Gate 1 |
+| Queue as the next increment | Everything else | Recorded in `state.md` as backlog; waits for closure per §6.1 |
+
+Never a parallel run. Two active runs violate the concurrency rule (§4) and make risk ownership ambiguous.
+
+---
+
+## 7. Conformance Checklist for Agent Authors
 
 When writing each `*.agent.md` file from the roster, verify the agent's prompt enforces this protocol:
 
@@ -181,3 +247,6 @@ When writing each `*.agent.md` file from the roster, verify the agent's prompt e
 - [ ] Never edits frozen artifacts (`00-packet/`, prior handoffs, gate records).
 - [ ] Cites packet sections, design docs, or finding IDs in every decision line.
 - [ ] Contains no time estimates in any plan, sequence, or phase description.
+- [ ] (Orchestrator only) Refuses to open a new run until the prior run meets every closure criterion in §6.1.
+- [ ] (Orchestrator only) Promotes run artifacts to their canonical repository locations at Gate 3 (§6.3).
+- [ ] Refuses an increment-run handoff that lacks the prior run's closure citation (§6.1).
