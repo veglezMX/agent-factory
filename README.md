@@ -4,7 +4,7 @@ A **project-agnostic, multi-agent software-delivery framework**. It takes a plai
 
 It is **not** an app. It is a reusable set of agent definitions, skills, process docs, and templates you copy into your own AI coding environment (Claude Code, GitHub Copilot / VS Code, Cursor, or any agent harness) and run against your own project.
 
-> **Will it work the moment I copy `.github/agents` + skills?** Not on every platform. The agent *definitions* are portable; the directory, the `tools:` frontmatter, and the orchestration model are platform-specific. See **[PORTABILITY.md](PORTABILITY.md)** and run `scripts/install.sh` for your platform. This README explains the model; PORTABILITY explains setup.
+> **Portability.** Copying `.github/agents` and the skills folders is a starting point, not a complete install. The agent *definitions* are portable across harnesses; the directory layout, the `tools:` frontmatter, and the orchestration model are platform-specific and need conversion. **[PORTABILITY.md](PORTABILITY.md)** documents per-platform setup and `scripts/install.sh` performs the conversion. This README explains the model; PORTABILITY explains the setup.
 
 ---
 
@@ -67,7 +67,7 @@ Use the `creating-stakeholder-packet` skill (it interviews you), or copy [`templ
 - **Copilot / VS Code:** invoke the `delivery-orchestrator` agent and point it at the packet.
 - **Cursor / generic:** drive the orchestrator in your main chat; see PORTABILITY for the invocation caveat.
 
-The run pauses at each **human gate** (scope, design, release, …) until you sign the gate record. This is by design.
+The run pauses at each **human gate** (scope, design, release, …) until you sign the gate record — an intentional checkpoint where a human reviews and approves before work continues.
 
 ---
 
@@ -82,7 +82,7 @@ The run pauses at each **human gate** (scope, design, release, …) until you si
 
 - **Orchestration model.** The framework assumes the orchestrator can invoke the other agents. On Claude Code, subagents cannot spawn subagents — so the orchestrator must run as the **main loop** (the `/run-delivery` driver does this). On Copilot/Cursor, agent-to-agent invocation is version-dependent; see PORTABILITY.
 - **`tools:` frontmatter is platform-specific.** The R / E / E+T / O **posture** is the portable contract; the literal tool names differ per platform. The converter rewrites them for Claude Code.
-- **Gates need a human.** Runs intentionally halt for sign-off; this is not a bug.
+- **Gates need a human.** Runs halt for sign-off by design; a stalled-looking run waiting at a gate is the framework working as intended, not a failure to recover from.
 - **`runs/` is the state store.** Keep it in the repo (or a sibling repo for pre-repo phases). Statelessness depends on it.
 - **No language/stack is assumed.** Agents adapt to your stack via the packet and design; nothing here is tied to a framework.
 
