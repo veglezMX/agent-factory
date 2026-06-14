@@ -1,0 +1,185 @@
+---
+case: greenfield
+name: Greenfield Full Build
+trigger: Stakeholder Input Packet
+entry_criteria:
+  - packet exists under 00-packet/, all OPEN items resolved
+  - no prior run open (handoff-protocol §6.1; first run has nothing to close)
+agents: [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20]
+skills: [creating-stakeholder-packet]
+gates: [scope, design, release]
+baseline: produces
+closure: >
+  Gate 3 approved, every risk ID terminal, zero open questions; requirements,
+  glossary, architecture, and contracts promoted to canonical docs/ (protocol §6.1, §6.3)
+---
+
+# Playbook — Greenfield Full Build
+
+**Purpose:** Take a complete Stakeholder Input Packet for a product that does not yet exist and carry it to a deployed full-stack application. This is the default case and the only one that runs the full roster. Every other case is a narrowing of this one.
+
+**Legend:**
+
+- `[H]` — human gate: the run blocks until the approver acts.
+- `↺` — loop-back: findings return work to an earlier agent (full table in `../agent-handoff-protocol.md` §4).
+- All ordering reflects dependency, never duration. No stage carries a time estimate.
+
+---
+
+## When to use / when NOT
+
+Use greenfield when the product is being built from zero — no prior run, no canonical `docs/` baseline to diff against.
+
+Do **not** use greenfield when:
+
+- The product already exists and was built by this pipeline, and you are adding a feature → run an **increment** (the greenfield variant below; consumes the canonical baseline).
+- The product exists but was **not** built by this pipeline and has no canonical baseline → `brownfield-onboard` (planned) to reconstruct the baseline first, then increment.
+- The work is a defect in shipped behavior → `defect` (planned), a lighter lane.
+
+See `README.md` for the case picker.
+
+---
+
+## Entry criteria
+
+Before issuing handoff `0001`, the Orchestrator verifies:
+
+- The packet exists, frozen under `00-packet/`, and all `OPEN` items are resolved (use the `creating-stakeholder-packet` skill if the packet is incomplete).
+- No other run is open (protocol §6.1).
+
+---
+
+## Run at a glance
+
+```text
+[Human invokes 01-delivery-orchestrator with the packet]
+
+PHASE 0 — DISCOVERY & DESIGN
+  02-requirements-analyst          packet → requirements doc + glossary + questions
+  [H] GATE 1: scope approval
+  03-ux-flow-designer              journeys → screen & flow inventory   (skip if headless/API-only)
+  04-solution-designer             requirements + UX → architecture + stack + integration inventory
+  08-architecture-guardian         design review                          ↺ 04 on violations
+  [H] GATE 2: design approval
+  05-bundle-compiler               plan + design → task bundle
+  06-bundle-intake-validator       bundle readiness report                ↺ 05 on blocking gaps
+
+PHASE 1 — PLANNING
+  07-product-planner               per-slice implementation plans
+
+PHASE 2 — BUILD
+  09-foundation-engineer           repo, tooling, shared, local runtime
+  10-contract-client-guardian      contracts + generated clients + mocks
+  11-data-migration-engineer       schemas, migrations, seeds, invariants
+  12-integration-engineer          provider fakes first, real adapters stubbed
+  15-security-engineer (review #1) auth design & integration egress review
+  13-backend-domain-implementer    services in dependency order, leaf services last
+  14-frontend-feature-builder      shared foundation → shells → screens → composition
+  (10/11 re-called on any contract or schema change during build)
+
+PHASE 3 — HARDENING
+  16-observability-engineer        logs, metrics, health checks, redaction
+  17-validation-test-engineer      invariants → contract → integration → E2E
+                                   → conformance → acceptance gate
+  18-code-reviewer                 full diff review                       ↺ 13/14 on blockers
+  15-security-engineer (review #2) final security pass                    ↺ 13/12 on findings
+
+PHASE 4 — DELIVERY
+  19-cicd-deployment-engineer      pipelines, containers, staging deploy
+  20-documentation-runbook-writer  docs, runbooks, release notes
+  19-cicd-deployment-engineer      release execution readiness
+  [H] GATE 3: release approval
+  01-delivery-orchestrator         final delivery summary + canonical promotion (§6.3)
+```
+
+---
+
+## Phase-by-phase
+
+Each step names what the agent receives and produces *in this case*. Agent scope is defined once in the roster; this is not restated here.
+
+### Phase 0 — Discovery & Design
+
+1. **Orchestrator boot (`01`).** Human invokes the Orchestrator with the packet. It creates the run workspace (protocol §1), registers the gates, and routes the packet to the Requirements Analyst. From here the human talks to the Orchestrator; specialists are reached through it.
+2. **Requirements Analyst (`02`).** Receives the packet. Produces the structured requirements document, the glossary promoted to ubiquitous language (every later artifact uses these words, no synonyms), and a **batched** list of open questions. Ambiguity and contradiction become questions, never guesses.
+   - **`[H]` GATE 1 — Scope.** Approver answers the questions and signs the requirements. Nothing downstream starts first.
+3. **UX Flow Designer (`03`).** Receives approved requirements, journeys, device constraints. Produces the screen inventory per shell with route-level states (loading / empty / error / unauthorized / success). **Skipped for headless or API-only products.**
+4. **Solution Designer (`04`).** Receives requirements, glossary, UX inventory, constraints, reliability posture. Produces service decomposition with a data-ownership map, dependency directions, the consistency decision, the integration inventory (fake-first), frontend topology, and a stack decision record with packet-traceable rationale.
+5. **Architecture Guardian review (`08`).** Reviews the design for boundary completeness, dependency directions, no service owning another's data, fake/adapter symmetry, frontend isolation. **↺** Violations return to `04`; re-review until clean.
+   - **`[H]` GATE 2 — Design.** Approver confirms stack and architecture. Cost-relevant choices surface here against the packet's constraints section.
+6. **Bundle Compiler (`05`).** Receives approved requirements + design. Produces the task bundle (intake, contracts, data, foundation, shared, integrations, services, frontend, security, observability, validation, containerization, CI/CD, deployment, documentation, release) plus the dependency graph and execution order. Validation tasks are seeded from business rules (invariants), journeys (E2E), and the packet's acceptance examples.
+7. **Bundle Intake Validator (`06`).** Checks that every journey reaches an E2E task, every business rule reaches an invariant test, every screen reaches a frontend task; no orphans or duplicates; execution order respects the graph. **↺** Blocking gaps return to `05`; non-blocking gaps are logged in `state.md`.
+
+### Phase 1 — Planning
+
+8. **Product Planner (`07`).** Receives the validated bundle. Produces implementation plans per **vertical slice** (ordered by business value), not per layer. Each plan: goal, scope, out-of-scope, affected artifacts, sequence, testing strategy, risks. No time estimates.
+
+### Phase 2 — Build
+
+9. **Foundation Engineer (`09`).** Repo layout, package management, lint/format, shared primitives, environment contracts, database/gateway foundations, local runtime. **Exit check:** a fresh clone reaches a running local environment via documented commands.
+10. **Contract & Client Guardian (`10`).** Authors the contracts from design skeletons using glossary terms verbatim, generates typed clients, seeds contract-aligned mocks. **From here, every API change routes back through `10` — no inline edits.**
+11. **Data & Migration Engineer (`11`).** Schemas + migrations with rollback notes. Invariants made structural where possible (append-only, uniqueness, non-negative constraints enforced at the database layer). Deterministic seed data.
+12. **Integration Engineer (`12`).** Each external provider built twice behind one interface: a deterministic fake (success / failure / abandon scenarios) first, the real adapter stubbed for later. Error mapping, retry/timeout policy, and data-minimization toward providers defined per provider.
+13. **Security review #1 (`15`).** Checkpoint before domain implementation: auth flow design (rate limiting, expiry, lockout), token lifecycle, the role/permission matrix from the packet, and integration egress (minimum data to each provider). Findings become constraints on the next step.
+14. **Backend Domain Implementer (`13`).** Services implemented in dependency order — shared utilities first, leaf/consumer services last (a service that consumes others comes after them). Each lands with service-level tests. Any contract or schema change triggers `↺ 10` / `↺ 11`, never an inline edit.
+15. **Frontend Feature Builder (`14`).** Starts as soon as contracts are stable (mock-backed; does not wait for all services): shared foundation (i18n, theme, a11y baseline, auth token flow) → shells → screens including first-class non-happy states → composition + route-state completion. All API access via generated clients; every user-facing string in i18n from the first commit.
+
+### Phase 3 — Hardening
+
+16. **Observability Engineer (`16`).** Structured logs with correlation IDs across the critical chain, health checks per service, metrics on the peak that matters, redaction rules from the packet's privacy section.
+17. **Validation & Test Engineer (`17`).** Runs the ladder in order: (1) stub conformance, (2) invariants (business rules as executable tests), (3) contract tests (services and mocks vs the contract truth), (4) frontend integration (route states incl. non-happy paths), (5) E2E (journeys incl. failure paths), (6) conformance sweep, (7) acceptance gate (the packet's examples, executed literally). Failures route to the owning implementer; the ladder restarts from the failed rung.
+18. **Code Reviewer (`18`).** Full-diff review. Blocking findings `↺` to the owning implementer; security smells route to `15`, boundary smells to `08`. Re-review after fixes.
+19. **Security review #2 (`15`).** Final pass: permission-matrix enforcement spot-checks, secret handling, CORS, rate limits, audit-log coverage. High findings block release.
+
+### Phase 4 — Delivery
+
+20. **CI/CD pipeline pass (`19`).** Pipelines (lint → typecheck → unit → contract → integration → E2E against fakes → image build → dependency/image scan → publish), deployment config for staging and production with rollback, migration job wired before app rollout, staging deploy smoke-checked.
+21. **Documentation & Runbook Writer (`20`).** Developer setup, local-run guide, API notes, operator runbook, deployment/rollback notes, release notes, known-limitations list — strictly from implemented behavior.
+22. **Release readiness (`19`, second pass) + `[H]` GATE 3.** The CI/CD agent assembles release evidence (bundle conformance, contracts aligned, migrations validated with rollback, security findings resolved or accepted, observability on critical flows, full ladder green, acceptance gate green, staging verified, rollback documented, runbook updated, limitations documented). Approver authorizes; CI/CD executes.
+23. **Orchestrator close-out (`01`).** Final delivery summary; promotes requirements, glossary, architecture, and contracts into canonical `docs/` (protocol §6.3) so the next increment has a baseline to diff against. Archives the open-question seed for the next packet.
+
+---
+
+## Loop-backs used
+
+| Finding | Detected by | Routed to |
+|---|---|---|
+| Requirement ambiguity or contradiction | 02, or anyone later | Human via Orchestrator (blocking) |
+| Architecture violation in design | 08 | 04 |
+| Architecture violation in code | 08 / 18 | 13 or 14 |
+| Bundle gap | 06 | 05 |
+| Needed API change during build | 13 / 14 | 10 |
+| Needed schema change during build | 13 | 11 |
+| Security finding | 15 | Owning implementer (12 / 13 / 14) |
+| Failing invariant / E2E / acceptance | 17 | Owning implementer |
+| Review blocker | 18 | Owning implementer |
+| Anything untraceable to packet or design | Anyone | Human via Orchestrator (blocking) |
+
+Full semantics: `../agent-handoff-protocol.md` §4.
+
+## Parallelization notes
+
+Safe to run concurrently once contracts are stable: frontend (mock-backed) alongside backend services; integration fakes alongside data work; documentation drafting alongside hardening (finalized only after behavior stabilizes). Never parallelize: anything across an unresolved gate, two agents editing the same boundary, or implementation against an unapproved contract change.
+
+---
+
+## Variant — Increment run
+
+A released product grows through **increment runs**: a new module, journey, or capability is a full run of *this* playbook with its inputs shrunk to the delta. The roster, gates, and phases are unchanged. The differences (handoff-protocol §6):
+
+- **Entry:** the prior run must be **closed** (Gate 3 approved or formally cancelled, zero open risks, zero open questions). The increment's first handoff cites that closure evidence.
+- **Packet:** `00-packet/` holds a **delta packet** naming the `baseline_run` and the canonical artifacts in force — only the new scope, plus any shipped behavior it intentionally changes.
+- **`baseline: consumes`** — `02` does a delta review against the canonical requirements/glossary; `08` reviews impact against the canonical architecture; `05` emits only new and changed tasks. Unchanged shipped behavior is out of bundle scope.
+- Accepted risks do not transfer: touching the area of a prior accepted risk raises a new risk ID that `supersedes` the old one, re-accepted at this run's gate (§6.5).
+
+Increment may graduate to its own `playbooks/increment.md` if its divergence from greenfield grows; today it is a documented variant.
+
+---
+
+## Closure criteria
+
+A greenfield run is closed when (protocol §6.1): Gate 3 is `approved` and signed (or the run is formally cancelled per §6.4); every risk ID is terminal (resolved or formally accepted by the gate approver's name); every gate condition is closed; zero unanswered open questions remain in the final `state.md`. At closure the Orchestrator promotes canonical artifacts (§6.3).
+
+## Worked example
+
+`../examples/comedor-greenfield.md` — this recipe applied to the Comedor Vecinal community-canteen product, linking the real run workspace under `runs/2026-06-comedor-vecinal/`.

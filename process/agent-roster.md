@@ -2,10 +2,11 @@
 
 **Purpose:** A project-agnostic catalog of the agents required to take a complete Stakeholder Input Packet and turn it into a deployed full-stack application. Teams use this list to author their own agent files (e.g., `.github/agents/*.agent.md` in VS Code), adapting wording to their stack while preserving each agent's scope and invocation rules.
 
-This roster pairs with two companion documents:
+This roster pairs with three companion documents:
 
 - **Stakeholder Input Packet** — the trigger artifact and sole source of business truth.
 - **Agent Handoff Protocol** — the payload format, gates, and loop-back rules agents use to pass work.
+- **Playbooks** (`playbooks/`) — the per-case execution recipes: which agents and skills a class of work uses, in what order. The roster is the complete set; each playbook is a subset. See `playbooks/README.md`.
 
 ---
 

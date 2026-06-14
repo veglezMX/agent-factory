@@ -1,6 +1,6 @@
 # Agent Handoff Protocol
 
-**Purpose:** The roster defines *who* the agents are; the playbook defines *when* they run. This document defines *how* work moves between them: the handoff payload format, the run workspace layout, gate semantics, escalation rules, and context-budget discipline. Without this contract, multi-agent workflows degrade into lossy chat history — agents repeat work, lose decisions, and silently drop risks.
+**Purpose:** The roster defines *who* the agents are; the playbooks (`playbooks/`) define *which* of them run for each case and *when*. This document defines *how* work moves between them: the handoff payload format, the run workspace layout, gate semantics, escalation rules, and context-budget discipline. Without this contract, multi-agent workflows degrade into lossy chat history — agents repeat work, lose decisions, and silently drop risks.
 
 This protocol is project-agnostic. Teams adopt it verbatim or adapt field names, but every run should preserve the four properties it exists to guarantee:
 
