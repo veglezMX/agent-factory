@@ -10,6 +10,7 @@
 #   scripts/install.sh --target claude        # generate .claude/agents/*.md + ensure .claude/skills/
 #   scripts/install.sh --target cursor        # generate .cursor/rules/*.mdc
 #   scripts/install.sh --target copilot       # print guidance (agents already native)
+#   scripts/install.sh --target plugin        # generate root agents/ skills/ commands/ (Claude Code marketplace plugin)
 #   scripts/install.sh --target claude --dest /path/to/your/project
 #
 set -euo pipefail
@@ -18,7 +19,7 @@ TARGET="claude"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST="$ROOT"
 
-usage() { sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -67,21 +68,23 @@ claude_tools_line() {
 # Extract a frontmatter field value (first match) from a file: field_value <file> <key>
 field_value() { grep -m1 "^$2:" "$1" | sed "s/^$2:[[:space:]]*//"; }
 
-install_skills_claude() {
+install_skills() {
+  local skills_dir="$1"
   [[ -d "$SKILLS_SRC" ]] || return 0
-  mkdir -p "$DEST/.claude/skills"
+  mkdir -p "$skills_dir"
   local s name dst
   for s in "$SKILLS_SRC"/*/; do
     [[ -d "$s" ]] || continue
-    name="$(basename "$s")"; dst="$DEST/.claude/skills/$name"
+    name="$(basename "$s")"; dst="$skills_dir/$name"
     if [[ -e "$dst" ]]; then echo "  skill '$name' already present (skipped)"; continue; fi
     cp -R "$s" "$dst"; echo "  skill '$name' -> $dst"
   done
 }
 
-convert_claude() {
-  local out_dir="$DEST/.claude/agents"; mkdir -p "$out_dir"
-  local count=0 src base name dest line
+# Convert .github/agents/*.agent.md into Claude-format *.md in <out_dir>.
+gen_agents() {
+  local out_dir="$1"; mkdir -p "$out_dir"
+  local count=0 src base dest line
   for src in "$AGENTS_SRC"/*.agent.md; do
     [[ -e "$src" ]] || continue
     base="$(basename "$src" .agent.md)"
@@ -100,13 +103,37 @@ convert_claude() {
     count=$((count+1))
   done
   echo "  $count agents -> $out_dir/"
-  install_skills_claude
+}
+
+convert_claude() {
+  gen_agents "$DEST/.claude/agents"
+  install_skills "$DEST/.claude/skills"
   if [[ ! -f "$DEST/.claude/commands/run-delivery.md" && -f "$ROOT/.claude/commands/run-delivery.md" ]]; then
     mkdir -p "$DEST/.claude/commands"
     cp "$ROOT/.claude/commands/run-delivery.md" "$DEST/.claude/commands/"
     echo "  driver -> $DEST/.claude/commands/run-delivery.md"
   fi
   echo "Done. Start a run with:  /run-delivery <run-id>"
+}
+
+# Claude Code marketplace plugin: components live at repo root (agents/ skills/
+# commands/) so the .claude-plugin/ manifest can auto-discover them. The two
+# manifests (.claude-plugin/plugin.json + marketplace.json) are tracked, not
+# generated — this only refreshes the derived component dirs.
+convert_plugin() {
+  gen_agents "$DEST/agents"
+  install_skills "$DEST/skills"
+  mkdir -p "$DEST/commands"
+  if [[ -f "$ROOT/.claude/commands/run-delivery.md" ]]; then
+    cp "$ROOT/.claude/commands/run-delivery.md" "$DEST/commands/run-delivery.md"
+    echo "  driver -> $DEST/commands/run-delivery.md"
+  fi
+  if [[ -f "$DEST/.claude-plugin/plugin.json" ]]; then
+    echo "  manifest present -> $DEST/.claude-plugin/plugin.json"
+  else
+    echo "  WARNING: $DEST/.claude-plugin/plugin.json missing — plugin will not load."
+  fi
+  echo "Done. Local test:  /plugin marketplace add $DEST"
 }
 
 convert_cursor() {
@@ -150,5 +177,6 @@ case "$TARGET" in
   claude)  convert_claude ;;
   cursor)  convert_cursor ;;
   copilot) print_copilot ;;
-  *) echo "unknown target: $TARGET (use claude | copilot | cursor)" >&2; exit 1 ;;
+  plugin)  convert_plugin ;;
+  *) echo "unknown target: $TARGET (use claude | copilot | cursor | plugin)" >&2; exit 1 ;;
 esac

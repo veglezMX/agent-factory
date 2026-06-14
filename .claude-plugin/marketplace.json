@@ -1,0 +1,14 @@
+{
+  "name": "agents-factory",
+  "owner": {
+    "name": "valentin",
+    "email": "contact@veglez.com"
+  },
+  "plugins": [
+    {
+      "name": "agents-factory",
+      "source": "./",
+      "description": "Star-shaped delivery pipeline: 28 specialist agents, the creating-stakeholder-packet skill, and the run-delivery command that turn a Stakeholder Input Packet into a deployed application."
+    }
+  ]
+}
