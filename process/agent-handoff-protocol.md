@@ -44,7 +44,8 @@ runs/
     │   ├── review/
     │   ├── infrastructure/                   (Infrastructure Guardian, agent 22)
     │   ├── performance/                      (Performance & Load Engineer, agent 23)
-    │   └── compliance/                       (Privacy & Compliance Officer, agent 26)
+    │   ├── compliance/                       (Privacy & Compliance Officer, agent 26)
+    │   └── accessibility/                    (Accessibility Auditor, agent 27)
     └── state.md                              (rolling run state; orchestrator-owned)
 ```
 

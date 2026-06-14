@@ -68,8 +68,10 @@ Tool names vary by editor and extension version; the posture is the contract, th
 | 24 | Visual & Design-System Designer | 0 — Discovery & Design | `E` (docs only) | Orchestrator | None |
 | 25 | AI & Prompt Engineer | 2 — Build (conditional) | `E+T` | Orchestrator | None |
 | 26 | Privacy & Compliance Officer | Cross-cutting (conditional) | `R`, `E` on request | Orchestrator | None |
+| 27 | Accessibility Auditor | Cross-cutting (UI-gated) | `R`, `E` on request | Orchestrator, Code Reviewer | None |
+| 28 | Product Analytics & Instrumentation Engineer | 3 — Hardening | `E+T` | Orchestrator | None |
 
-Agents `01`–`20` are the core roster; `21`–`26` are expansion agents (see the dedicated section after Phase 4). `25` and `26` are conditional — engaged only when the packet calls for AI behavior or regulated/PII handling.
+Agents `01`–`20` are the core roster; `21`–`28` are expansion agents (see the dedicated section after Phase 4). `27` is UI-gated — it runs for any project with user-facing screens (skipped for API-only or headless), the same condition as `03` and `24`. `25` and `26` are conditional — engaged only when the packet calls for AI behavior or regulated/PII handling.
 
 ---
 
@@ -297,9 +299,9 @@ All build agents share two universal boundaries: they work only from an approved
 
 ---
 
-## Expansion Agents (21–26)
+## Expansion Agents (21–28)
 
-These agents extend the core roster for concerns the original twenty either folded into a neighbor or left implicit: cloud provisioning, infrastructure review, non-functional performance, visual/design-system authoring, in-product AI, and legal/regulatory data obligations. Each is opt-in per case (see `playbooks/README.md`). The author/reviewer separation and star call-graph rules apply unchanged — `21` authors infrastructure and `22` reviews it, exactly as `04`↔`08`. Agents `25` and `26` are conditional, engaged only when the packet calls for AI behavior or regulated/PII handling.
+These agents extend the core roster for concerns the original twenty either folded into a neighbor or left implicit: cloud provisioning, infrastructure review, non-functional performance, visual/design-system authoring, in-product AI, legal/regulatory data obligations, accessibility review, and product analytics. Each is opt-in per case (see `playbooks/README.md`). The author/reviewer separation and star call-graph rules apply unchanged — `21` authors infrastructure and `22` reviews it, exactly as `04`↔`08`; and `27` reviews the accessibility that `24`/`03` author and `14` implements, closing that author/reviewer pair the same way. Agents `25` and `26` are conditional, engaged only when the packet calls for AI behavior or regulated/PII handling; `27` is UI-gated (skipped for API-only or headless projects); `28` is the analytics counterpart to the Observability Engineer (`16`) the way `26` is the distinct-lens counterpart to the Security Engineer (`15`).
 
 ### 21 — Infrastructure & Platform Engineer
 
@@ -360,6 +362,26 @@ These agents extend the core roster for concerns the original twenty either fold
 **Tools:** `R` by default; `E` only under an explicit authoring task.
 
 **Invocation:** Called by the Orchestrator, conditionally, at fixed checkpoints for regulated or PII-heavy domains (after data design, after each integration that touches personal data, pre-release) and ad hoc when a change touches personal-data handling. Calls no one; recommends a remediating agent (11 for retention/deletion, 12 for processor exposure, 13 for rights endpoints/audit-as-record, 15 for attack-surface findings) and hands back to 01. User-invocable: **yes**.
+
+### 27 — Accessibility Auditor
+
+**Does:** Reviews — never authors — accessibility against the packet's accessibility obligations, the reviewing counterpart to the accessibility *authored* by the Visual & Design-System Designer (24) and noted by the UX Flow Designer (03), and *implemented* by the Frontend Feature Builder (14). Audits WCAG 2.2 AA — or the conformance level packet §10 sets — across the four POUR principles: perceivable (text alternatives, captions, color-independent meaning, contrast), operable (full keyboard operability, visible focus, logical focus order, no keyboard trap, target size, reduced motion, no time-trap), understandable (labels/instructions, error identification & suggestion, consistent navigation, page language), and robust (name/role/value, correct ARIA, semantic structure); also checks reflow/zoom to 400%, orientation, and that route-level UX states (loading, empty, error, unauthorized, success) are programmatically announced and the §3 critical journeys are completable by keyboard and screen reader. Closes the same author/reviewer gap as 04↔08 and 21↔22. Operates read-only for review; switches to edit-capable only when explicitly tasked to author a named accessibility artifact (e.g., an accessibility conformance report / VPAT / ACR). UI-gated — runs for any project with user-facing screens, optional for API-only or headless projects (the same condition as 03 and 24); not conditional on regulated/PII data (that is 26's condition).
+
+**Scope:** Owns accessibility findings by severity (written to `runs/<run-id>/findings/accessibility/`), the WCAG conformance verdict on every reviewed design spec or UI diff, and (when tasked) a named accessibility conformance artifact. Never implements components or stylesheets (that is the Frontend Feature Builder 14, which it reviews), never defines flows, screens, or route states (UX Flow Designer 03), never defines design tokens or component visual specs (Visual & Design-System Designer 24, which it reviews), never weakens or quietly lowers an accessibility requirement set by packet §10, never approves accessibility behavior untraceable to packet §10 (or §12/§3/§13), never edits any file outside an explicit authoring task, never invokes another specialist. Traces decisions to packet §10 (Languages, Branding & Accessibility), with §12 (Devices & Channels — responsive/zoom/touch-target/orientation), §3 (User Journeys — keyboard & screen-reader completion), and §13 (Acceptance Examples — when accessibility is an acceptance condition).
+
+**Tools:** `R` by default; `E` only under an explicit authoring task.
+
+**Invocation:** Called by the Orchestrator at the design gate (to review 24's spec and 03's state inventory before build), at a Hardening checkpoint once frontend behavior stabilizes (to review 14's UI), and pre-release; the Code Reviewer (18) may route a UI diff to it directly. Skipped for API-only or headless projects. Calls no one; recommends a remediating agent (24 for a design-spec a11y gap, 14 for an implementation a11y gap, 03 for a flow/navigation a11y gap) and hands back to 01. User-invocable: **yes**.
+
+### 28 — Product Analytics & Instrumentation Engineer
+
+**Does:** Makes the *product* measurable against its goals — the analytics counterpart to the Observability Engineer (16) the way the Privacy & Compliance Officer (26) is the distinct-lens counterpart to the Security Engineer (15). Because the packet has no dedicated success-metrics section, it triangulates one: the north-star outcome/top-level KPI from §1, the conversion funnels and drop-off points from §3, the per-feature adoption events (weighted by priority) from §4, and the measurable success conditions from §13. Implements a consent-gated product event taxonomy, the instrumentation that emits it, KPI/funnel dashboards, and the experiment-metric surfaces a future `experiment` (A/B test) case will read. Boundary with 16 is sharp: 16 makes the running system *diagnosable by an operator* (logs/metrics/traces/health); 28 makes the product *measurable* (product/user-behavior events, KPIs, funnels, adoption) and may consume 16's telemetry as input but never owns it.
+
+**Scope:** Owns the product event taxonomy/schema (event names, properties, and the user/session identity model for analytics), the instrumentation code that emits those events, the consent-gating of analytics collection, KPI/funnel dashboards built over the events, the experiment-metric hooks/surfaces, the analytics redaction rules applied to payloads, and the product-measurement-plan document (written to a canonical run docs path designated by the Orchestrator — no dedicated `findings/` subdir, mirroring 16). Never changes business behavior (a KPI needing a behavioral change routes to the Backend Domain Implementer 13); never puts secret or restricted personal data in any event payload beyond what §9 allows; never collects analytics without the consent §9 requires; never doubles as the Observability Engineer (operator-facing diagnostic signals stay 16's); never authors API contracts (Contract & Client Guardian 10) or data schemas/migrations (Data & Migration Engineer 11); never edits code outside its boundary; never invokes another specialist. Governed by §9 (consent-gated, data-minimized, retention-bounded) and traces every metric/event to §1/§3/§4/§13. When the lawful basis or consent requirement for an event is unclear or untraceable to §9, raises it as a blocking question and recommends the Privacy & Compliance Officer (26) — 28 implements the consent gate, 26 judges its legality.
+
+**Tools:** `E+T` (terminal scoped to project-local commands — builds, tests, generators, local fixtures, and the analytics SDK against a local/test harness; never mutates a production/remote analytics backend, never sends real events to a live analytics provider, and never provisions external analytics/dashboard services without recorded human approval).
+
+**Invocation:** Called by the Orchestrator in Phase 3 — Hardening, once product behavior stabilizes and before final validation, cross-cutting in parallel with the Observability Engineer (16). Calls no one; recommends a remediating agent (13 for a needed behavior change, 11 for a retention concern on stored analytics, 26 for consent/lawful-basis, 16 if a request is really operator telemetry) and hands back to 01. User-invocable: **yes**.
 
 ---
 

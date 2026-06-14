@@ -24,7 +24,7 @@ A run is driven by the **Delivery Orchestrator** (agent 01): it picks the next a
 ## Repository layout
 
 ```text
-.github/agents/      26 agent definitions — Copilot/VS Code `.agent.md` format. SOURCE OF TRUTH.
+.github/agents/      28 agent definitions — Copilot/VS Code `.agent.md` format. SOURCE OF TRUTH.
 .github/skills/      skills in Copilot/manual form
 .claude/skills/      the same skills, Claude Code layout
 .claude/agents/      Claude Code agents — GENERATED from .github/agents by scripts/install.sh
@@ -73,7 +73,7 @@ The run pauses at each **human gate** (scope, design, release, …) until you si
 
 ## What's covered
 
-- **26 agents** — see the [roster](process/agent-roster.md). Core 01–20 + expansion 21–26 (infrastructure, performance, visual/design-system, AI/prompt, privacy/compliance).
+- **28 agents** — see the [roster](process/agent-roster.md). Core 01–20 + expansion 21–28 (infrastructure, performance, visual/design-system, AI/prompt, privacy/compliance, accessibility, product-analytics).
 - **9 cases** — see the [playbook index](process/playbooks/README.md): `greenfield` (+`increment`), `brownfield-onboard`, `defect`, `incident`, `refactor`, `dependency-upgrade`, `spike`, `deprecation`, `data-operation`.
 
 ---

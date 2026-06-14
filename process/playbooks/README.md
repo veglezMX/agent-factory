@@ -82,6 +82,8 @@ Every column is authoritative — each is taken from the agent set its playbook 
 | 24 | Visual & Design-System Designer | x | – | – | – | – | – | – | – | – |
 | 25 | AI & Prompt Engineer | ~ | – | ~ | – | – | – | ~ | – | – |
 | 26 | Privacy & Compliance Officer | ~ | ~ | – | – | – | – | – | ~ | ~ |
+| 27 | Accessibility Auditor | x | ~ | ~ | – | – | – | – | ~ | – |
+| 28 | Product Analytics & Instrumentation Engineer | x | ~ | – | – | – | – | ~ | ~ | – |
 
 Reading the columns: cases drop the discovery/design front-half (`02`–`08`) when there is no new scope to design (`defect`, `incident`, `dependency-upgrade`, `data-operation`); `brownfield-onboard` drops `09` because the foundation already exists; `spike` runs almost nothing to `x` because its only committed deliverable is a decision; `data-operation` collapses to the `11`+`17` core behind a pre-execution gate. The conditional (`~`) marks fire on what a given run actually touches — e.g. `10` only when an API moves, `26` only on regulated/PII data.
 

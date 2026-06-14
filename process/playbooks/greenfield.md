@@ -5,7 +5,7 @@ trigger: Stakeholder Input Packet
 entry_criteria:
   - packet exists under 00-packet/, all OPEN items resolved
   - no prior run open (handoff-protocol §6.1; first run has nothing to close)
-agents: [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26]
+agents: [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28]
 skills: [creating-stakeholder-packet]
 gates: [scope, design, release]
 baseline: produces
@@ -61,6 +61,7 @@ PHASE 0 — DISCOVERY & DESIGN
   24-visual-design-system-designer branding + a11y → design tokens + component visual specs  (skip if headless)
   04-solution-designer             requirements + UX → architecture + stack + integration inventory
   08-architecture-guardian         design review                          ↺ 04 on violations
+  27-accessibility-auditor         design-system a11y spec review (§10)   ↺ 24 on findings  (skip if headless)
   [H] GATE 2: design approval
   05-bundle-compiler               plan + design → task bundle
   06-bundle-intake-validator       bundle readiness report                ↺ 05 on blocking gaps
@@ -82,7 +83,9 @@ PHASE 2 — BUILD
 
 PHASE 3 — HARDENING
   16-observability-engineer        logs, metrics, health checks, redaction
+  28-product-analytics-engineer    event taxonomy, KPIs/funnels (§1/§3/§4/§13), consent-gated (§9)
   23-performance-load-engineer     load/stress/soak vs budget (§11)       ↺ owning impl on regressions
+  27-accessibility-auditor         implemented UI a11y audit (WCAG, §10)  ↺ 14 on findings  (skip if headless)
   17-validation-test-engineer      invariants → contract → integration → E2E
                                    → conformance → acceptance gate
   18-code-reviewer                 full diff review                       ↺ 13/14 on blockers
@@ -114,6 +117,7 @@ Each step names what the agent receives and produces *in this case*. Agent scope
    - **3a. Visual & Design-System Designer (`24`).** Receives the UX inventory and packet §10 (branding & accessibility). Produces the design system — tokens (color, type scale, spacing, radius, elevation, motion), component visual specs and states, light/dark theming, responsive breakpoints, and contrast/focus compliance — attached to 03's screens so `14` implements to spec instead of improvising. **Skipped for headless or API-only products.**
 4. **Solution Designer (`04`).** Receives requirements, glossary, UX inventory, constraints, reliability posture. Produces service decomposition with a data-ownership map, dependency directions, the consistency decision, the integration inventory (fake-first), frontend topology, and a stack decision record with packet-traceable rationale.
 5. **Architecture Guardian review (`08`).** Reviews the design for boundary completeness, dependency directions, no service owning another's data, fake/adapter symmetry, frontend isolation. **↺** Violations return to `04`; re-review until clean.
+   - **5a. Accessibility Auditor (`27`) — design-gate review.** Receives 24's design-system accessibility spec and 03's route-state inventory. Audits them against the conformance level packet §10 sets (contrast, focus order, target size, reduced motion, route-state announcements) before any UI is built — the independent review that closes 24/03's authored a11y, the way 08 closes 04's design. **↺** Findings return to `24` (spec) or `03` (flow); re-review until clean. **Skipped for headless or API-only products.**
    - **`[H]` GATE 2 — Design.** Approver confirms stack and architecture. Cost-relevant choices surface here against the packet's constraints section.
 6. **Bundle Compiler (`05`).** Receives approved requirements + design. Produces the task bundle (intake, contracts, data, foundation, shared, integrations, services, frontend, security, observability, validation, containerization, CI/CD, deployment, documentation, release) plus the dependency graph and execution order. Validation tasks are seeded from business rules (invariants), journeys (E2E), and the packet's acceptance examples.
 7. **Bundle Intake Validator (`06`).** Checks that every journey reaches an E2E task, every business rule reaches an invariant test, every screen reaches a frontend task; no orphans or duplicates; execution order respects the graph. **↺** Blocking gaps return to `05`; non-blocking gaps are logged in `state.md`.
@@ -138,6 +142,8 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 
 16. **Observability Engineer (`16`).** Structured logs with correlation IDs across the critical chain, health checks per service, metrics on the peak that matters, redaction rules from the packet's privacy section.
     - **16a. Performance & Load Engineer (`23`).** Derives performance budgets/SLOs from packet §11 and the §3 critical journeys; runs load / stress / soak / spike suites against the local or staging runtime (provider fakes); profiles hot paths; validates latency, throughput, and headroom against budget. Consumes 16's signals as measurement input. Regressions `↺` to the owning implementer; budgets are never quietly raised to pass.
+    - **16b. Product Analytics & Instrumentation Engineer (`28`).** Triangulates a product-measurement plan from §1 (north-star KPI), §3 (funnels/drop-off), §4 (priority-weighted adoption), and §13 (success conditions); implements a consent-gated event taxonomy and KPI/funnel dashboards, with payload redaction and retention from §9. Distinct lens from 16 (operator diagnosis vs product measurement); consumes 16's telemetry but never owns it. Behavior changes `↺` to `13`; unclear lawful basis routes to `26`.
+    - **16c. Accessibility Auditor (`27`) — implementation review.** Audits 14's implemented shells, screens, and route-level states against packet §10 (WCAG POUR, keyboard/screen-reader completion of §3 journeys, reflow/zoom, state announcements). **↺** Findings return to `14`; re-review until clean. **Skipped for headless or API-only products.**
 17. **Validation & Test Engineer (`17`).** Runs the ladder in order: (1) stub conformance, (2) invariants (business rules as executable tests), (3) contract tests (services and mocks vs the contract truth), (4) frontend integration (route states incl. non-happy paths), (5) E2E (journeys incl. failure paths), (6) conformance sweep, (7) acceptance gate (the packet's examples, executed literally). Failures route to the owning implementer; the ladder restarts from the failed rung.
 18. **Code Reviewer (`18`).** Full-diff review. Blocking findings `↺` to the owning implementer; security smells route to `15`, boundary smells to `08`. Re-review after fixes.
 19. **Security review #2 (`15`).** Final pass: permission-matrix enforcement spot-checks, secret handling, CORS, rate limits, audit-log coverage. High findings block release.
