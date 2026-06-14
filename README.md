@@ -29,6 +29,8 @@ A run is driven by the **Delivery Orchestrator** (agent 01): it picks the next a
 .claude/skills/      the same skills, Claude Code layout
 .claude/agents/      Claude Code agents — GENERATED from .github/agents by scripts/install.sh
 .claude/commands/    run-delivery — the orchestrator driver for Claude Code
+.claude-plugin/      plugin.json + marketplace.json — the Claude Code marketplace plugin
+agents/ skills/ commands/   plugin component dirs (Claude Code format) — GENERATED from .github
 process/             the spine: agent-roster.md, agent-handoff-protocol.md, playbooks/
 templates/           the Stakeholder Input Packet template
 runs/                per-run workspaces — the live state store (packet, requirements, gates, handoffs)
@@ -53,6 +55,9 @@ scripts/install.sh --target cursor
 
 # GitHub Copilot / VS Code — agents are already native in .github/agents/ (no conversion)
 scripts/install.sh --target copilot   # prints guidance only
+
+# Claude Code marketplace plugin — generates root agents/ skills/ commands/ (+ .claude-plugin/ manifests)
+scripts/install.sh --target plugin
 ```
 
 Copy the relevant folders (`.claude/`, `.github/`, or `.cursor/`) plus `process/` and `templates/` into your project. See [PORTABILITY.md](PORTABILITY.md) for exactly which folders each platform needs.
@@ -68,6 +73,35 @@ Use the `creating-stakeholder-packet` skill (it interviews you), or copy [`templ
 - **Cursor / generic:** drive the orchestrator in your main chat; see PORTABILITY for the invocation caveat.
 
 The run pauses at each **human gate** (scope, design, release, …) until you sign the gate record — an intentional checkpoint where a human reviews and approves before work continues.
+
+---
+
+## Use as a Claude Code plugin (CLI & web)
+
+The roster also ships as a **Claude Code marketplace plugin** — the repo is both the plugin and a single-plugin marketplace (`.claude-plugin/plugin.json` + `marketplace.json`). Regenerate the bundled component dirs after editing any agent with `scripts/install.sh --target plugin`.
+
+**CLI** — add the marketplace, then install:
+
+```bash
+# from a local clone…
+/plugin marketplace add /path/to/agent-factory
+# …or straight from GitHub
+/plugin marketplace add veglezMX/agent-factory
+/plugin install agents-factory@agents-factory
+```
+
+**Web (claude.ai/code)** — there is no `/plugin` UI; plugins load only from committed settings, the marketplace repo must be **public**, and web clones `main`. In each project you want the roster in, commit `.claude/settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "agents-factory": { "source": { "source": "github", "repo": "veglezMX/agent-factory" } }
+  },
+  "enabledPlugins": { "agents-factory@agents-factory": true }
+}
+```
+
+Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace and plugin are both named `agents-factory` (the `<plugin>@<marketplace>` key).
 
 ---
 
