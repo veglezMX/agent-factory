@@ -41,7 +41,10 @@ runs/
     ├── findings/
     │   ├── architecture/
     │   ├── security/
-    │   └── review/
+    │   ├── review/
+    │   ├── infrastructure/                   (Infrastructure Guardian, agent 22)
+    │   ├── performance/                      (Performance & Load Engineer, agent 23)
+    │   └── compliance/                       (Privacy & Compliance Officer, agent 26)
     └── state.md                              (rolling run state; orchestrator-owned)
 ```
 
@@ -138,6 +141,20 @@ notes: ...
 - A `rejected` gate routes back to the producing agent with the rejection notes as a new inbound handoff.
 - `approved-with-conditions` lets the run proceed; each condition becomes a tracked risk that must be closed before Gate 3.
 - **Mid-run scope change re-opens Gate 1.** The amendment flows: packet amendment → Requirements Analyst delta review → Gate 1 re-approval → Bundle Compiler delta → Intake Validator. Implementers never absorb scope changes directly from chat. A request too large for an amendment queues as the next increment run (§6.6).
+
+### 3.4 Case-specific gates
+
+The three standard gates above are the greenfield set. A case (see `playbooks/`) may use fewer, or substitute a variant. Every variant still records a human decision in `gates/` using the §3.2 format; only the *trigger, ordering, or decision vocabulary* differs. The authored variants:
+
+| Gate variant | Used by case | What differs from a standard gate |
+|---|---|---|
+| **Release — emergency/retroactive** | `incident`; `dependency-upgrade` (active-exploit) | Mitigation deploys first under documented emergency authority; the gate is signed **retroactively** against the logged action timeline. No rigor is waived — regression, review, and a post-incident report still happen, only after restore. The gate record adds an `emergency_authorized_by` line and the timeline as evidence. |
+| **Behavior-parity** | `refactor` | One gate with two checkpoints: it approves the pre-change characterization suite captured all-green *before* any code moves, and confirms the post-change suite is green and identical test-for-test *after*. `decision: approved` requires both halves. |
+| **Data-operation (pre-execution)** | `data-operation` | A gate that fires **before** execution: the approver signs the operation plan and the rollback plan together, with the dry-run diff attached as evidence. Destructive operations cannot proceed without it (mirrors the agent-11 destructive rule). Post-execution verification is a closure condition, not a second gate. |
+| **Findings / decision** | `spike` | Terminal gate that accepts a decision/findings record rather than a release. `decision: accepted` (not a deployment). No canonical promotion (§6.3) occurs; the gate's evidence is the recommended follow-on case and its seeded packet. |
+| **Release — baseline-approval** | `brownfield-onboard` | The terminal gate approves a **reconstructed baseline** (requirements, glossary, architecture, contracts, data model) rather than a new deployment. On approval the Orchestrator promotes the baseline to canonical `docs/` (§6.3) so the follow-on increment has something to diff. |
+
+A case's playbook names which variant it uses and at which point; the semantics live here so the playbook references rather than restates them.
 
 ---
 

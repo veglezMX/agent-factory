@@ -5,7 +5,7 @@ trigger: Stakeholder Input Packet
 entry_criteria:
   - packet exists under 00-packet/, all OPEN items resolved
   - no prior run open (handoff-protocol §6.1; first run has nothing to close)
-agents: [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20]
+agents: [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26]
 skills: [creating-stakeholder-packet]
 gates: [scope, design, release]
 baseline: produces
@@ -58,6 +58,7 @@ PHASE 0 — DISCOVERY & DESIGN
   02-requirements-analyst          packet → requirements doc + glossary + questions
   [H] GATE 1: scope approval
   03-ux-flow-designer              journeys → screen & flow inventory   (skip if headless/API-only)
+  24-visual-design-system-designer branding + a11y → design tokens + component visual specs  (skip if headless)
   04-solution-designer             requirements + UX → architecture + stack + integration inventory
   08-architecture-guardian         design review                          ↺ 04 on violations
   [H] GATE 2: design approval
@@ -73,20 +74,26 @@ PHASE 2 — BUILD
   11-data-migration-engineer       schemas, migrations, seeds, invariants
   12-integration-engineer          provider fakes first, real adapters stubbed
   15-security-engineer (review #1) auth design & integration egress review
+  26-privacy-compliance-officer    data obligations review                (conditional: regulated/PII)
   13-backend-domain-implementer    services in dependency order, leaf services last
+  25-ai-prompt-engineer            prompts, evals, guardrails per AI feature (conditional: AI in packet)
   14-frontend-feature-builder      shared foundation → shells → screens → composition
   (10/11 re-called on any contract or schema change during build)
 
 PHASE 3 — HARDENING
   16-observability-engineer        logs, metrics, health checks, redaction
+  23-performance-load-engineer     load/stress/soak vs budget (§11)       ↺ owning impl on regressions
   17-validation-test-engineer      invariants → contract → integration → E2E
                                    → conformance → acceptance gate
   18-code-reviewer                 full diff review                       ↺ 13/14 on blockers
   15-security-engineer (review #2) final security pass                    ↺ 13/12 on findings
 
 PHASE 4 — DELIVERY
+  21-infrastructure-platform-eng   provision network, data stores, secrets, DNS/TLS, IAM
+  22-infrastructure-guardian       IaC review                             ↺ 21 on findings
   19-cicd-deployment-engineer      pipelines, containers, staging deploy
   20-documentation-runbook-writer  docs, runbooks, release notes
+  23-performance-load-engineer     pre-release load gate vs budget
   19-cicd-deployment-engineer      release execution readiness
   [H] GATE 3: release approval
   01-delivery-orchestrator         final delivery summary + canonical promotion (§6.3)
@@ -104,6 +111,7 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 2. **Requirements Analyst (`02`).** Receives the packet. Produces the structured requirements document, the glossary promoted to ubiquitous language (every later artifact uses these words, no synonyms), and a **batched** list of open questions. Ambiguity and contradiction become questions, never guesses.
    - **`[H]` GATE 1 — Scope.** Approver answers the questions and signs the requirements. Nothing downstream starts first.
 3. **UX Flow Designer (`03`).** Receives approved requirements, journeys, device constraints. Produces the screen inventory per shell with route-level states (loading / empty / error / unauthorized / success). **Skipped for headless or API-only products.**
+   - **3a. Visual & Design-System Designer (`24`).** Receives the UX inventory and packet §10 (branding & accessibility). Produces the design system — tokens (color, type scale, spacing, radius, elevation, motion), component visual specs and states, light/dark theming, responsive breakpoints, and contrast/focus compliance — attached to 03's screens so `14` implements to spec instead of improvising. **Skipped for headless or API-only products.**
 4. **Solution Designer (`04`).** Receives requirements, glossary, UX inventory, constraints, reliability posture. Produces service decomposition with a data-ownership map, dependency directions, the consistency decision, the integration inventory (fake-first), frontend topology, and a stack decision record with packet-traceable rationale.
 5. **Architecture Guardian review (`08`).** Reviews the design for boundary completeness, dependency directions, no service owning another's data, fake/adapter symmetry, frontend isolation. **↺** Violations return to `04`; re-review until clean.
    - **`[H]` GATE 2 — Design.** Approver confirms stack and architecture. Cost-relevant choices surface here against the packet's constraints section.
@@ -121,21 +129,25 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 11. **Data & Migration Engineer (`11`).** Schemas + migrations with rollback notes. Invariants made structural where possible (append-only, uniqueness, non-negative constraints enforced at the database layer). Deterministic seed data.
 12. **Integration Engineer (`12`).** Each external provider built twice behind one interface: a deterministic fake (success / failure / abandon scenarios) first, the real adapter stubbed for later. Error mapping, retry/timeout policy, and data-minimization toward providers defined per provider.
 13. **Security review #1 (`15`).** Checkpoint before domain implementation: auth flow design (rate limiting, expiry, lockout), token lifecycle, the role/permission matrix from the packet, and integration egress (minimum data to each provider). Findings become constraints on the next step.
+    - **13a. Privacy & Compliance Officer (`26`) — conditional (regulated/PII).** Reviews packet §9 obligations alongside security #1: lawful basis, data minimization toward providers, retention/deletion enforceability, residency, and data-subject rights. Findings become constraints, the same way 15's do. Engaged only when the packet involves regulated or PII-heavy data.
 14. **Backend Domain Implementer (`13`).** Services implemented in dependency order — shared utilities first, leaf/consumer services last (a service that consumes others comes after them). Each lands with service-level tests. Any contract or schema change triggers `↺ 10` / `↺ 11`, never an inline edit.
+    - **14a. AI & Prompt Engineer (`25`) — conditional (AI in packet).** For each AI/LLM feature named in packet §4/§7: designs and versions prompts, selects the model with a decision record, builds the eval harness (golden sets + regression), wires guardrails (injection defense, output validation, fallback), and sets token/cost budgets. Consumes `12`'s raw provider adapter; never reimplements it. Runs only on AI-bearing products.
 15. **Frontend Feature Builder (`14`).** Starts as soon as contracts are stable (mock-backed; does not wait for all services): shared foundation (i18n, theme, a11y baseline, auth token flow) → shells → screens including first-class non-happy states → composition + route-state completion. All API access via generated clients; every user-facing string in i18n from the first commit.
 
 ### Phase 3 — Hardening
 
 16. **Observability Engineer (`16`).** Structured logs with correlation IDs across the critical chain, health checks per service, metrics on the peak that matters, redaction rules from the packet's privacy section.
+    - **16a. Performance & Load Engineer (`23`).** Derives performance budgets/SLOs from packet §11 and the §3 critical journeys; runs load / stress / soak / spike suites against the local or staging runtime (provider fakes); profiles hot paths; validates latency, throughput, and headroom against budget. Consumes 16's signals as measurement input. Regressions `↺` to the owning implementer; budgets are never quietly raised to pass.
 17. **Validation & Test Engineer (`17`).** Runs the ladder in order: (1) stub conformance, (2) invariants (business rules as executable tests), (3) contract tests (services and mocks vs the contract truth), (4) frontend integration (route states incl. non-happy paths), (5) E2E (journeys incl. failure paths), (6) conformance sweep, (7) acceptance gate (the packet's examples, executed literally). Failures route to the owning implementer; the ladder restarts from the failed rung.
 18. **Code Reviewer (`18`).** Full-diff review. Blocking findings `↺` to the owning implementer; security smells route to `15`, boundary smells to `08`. Re-review after fixes.
 19. **Security review #2 (`15`).** Final pass: permission-matrix enforcement spot-checks, secret handling, CORS, rate limits, audit-log coverage. High findings block release.
 
 ### Phase 4 — Delivery
 
+- **Provisioning, before any deploy — Infrastructure & Platform Engineer (`21`) + Infrastructure Guardian (`22`).** `21` provisions the platform as IaC from the design and packet §11/§14/§9: network, managed data stores, secret store, DNS/TLS, CDN, least-privilege IAM, and the compute/runtime targets — plan-before-apply, no destructive or shared/prod apply without recorded approval. `22` reviews the plan/change-set for least privilege, public surface, destructive changes, drift, and cost sizing; **↺** findings return to `21`. Boundary: `21` provisions the targets, `19` deploys onto them.
 20. **CI/CD pipeline pass (`19`).** Pipelines (lint → typecheck → unit → contract → integration → E2E against fakes → image build → dependency/image scan → publish), deployment config for staging and production with rollback, migration job wired before app rollout, staging deploy smoke-checked.
 21. **Documentation & Runbook Writer (`20`).** Developer setup, local-run guide, API notes, operator runbook, deployment/rollback notes, release notes, known-limitations list — strictly from implemented behavior.
-22. **Release readiness (`19`, second pass) + `[H]` GATE 3.** The CI/CD agent assembles release evidence (bundle conformance, contracts aligned, migrations validated with rollback, security findings resolved or accepted, observability on critical flows, full ladder green, acceptance gate green, staging verified, rollback documented, runbook updated, limitations documented). Approver authorizes; CI/CD executes.
+22. **Release readiness (`19`, second pass) + `[H]` GATE 3.** The CI/CD agent assembles release evidence (bundle conformance, contracts aligned, migrations validated with rollback, security findings resolved or accepted, infrastructure reviewed by `22` with no destructive surprises, performance budgets met under peak (§11, from `23`), observability on critical flows, full ladder green, acceptance gate green, staging verified, rollback documented, runbook updated, limitations documented). Approver authorizes; CI/CD executes.
 23. **Orchestrator close-out (`01`).** Final delivery summary; promotes requirements, glossary, architecture, and contracts into canonical `docs/` (protocol §6.3) so the next increment has a baseline to diff against. Archives the open-question seed for the next packet.
 
 ---
@@ -151,6 +163,9 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 | Needed API change during build | 13 / 14 | 10 |
 | Needed schema change during build | 13 | 11 |
 | Security finding | 15 | Owning implementer (12 / 13 / 14) |
+| Infrastructure finding (IAM, exposure, destructive change) | 22 | 21 |
+| Performance regression vs budget (§11) | 23 | Owning implementer |
+| Privacy / compliance finding | 26 | Owning implementer (11 / 12 / 13) |
 | Failing invariant / E2E / acceptance | 17 | Owning implementer |
 | Review blocker | 18 | Owning implementer |
 | Anything untraceable to packet or design | Anyone | Human via Orchestrator (blocking) |

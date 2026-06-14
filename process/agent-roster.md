@@ -62,6 +62,14 @@ Tool names vary by editor and extension version; the posture is the contract, th
 | 18 | Code Reviewer | 3 — Hardening | `R` | Orchestrator | Security Engineer, Architecture Guardian (routing only) |
 | 19 | CI/CD & Deployment Engineer | 4 — Delivery | `E+T` | Orchestrator | None |
 | 20 | Documentation & Runbook Writer | 4 — Delivery | `E` (docs only) | Orchestrator | None |
+| 21 | Infrastructure & Platform Engineer | 4 — Delivery (provisioning) | `E+T` | Orchestrator | None |
+| 22 | Infrastructure Guardian | Cross-cutting | `R` | Orchestrator, CI/CD & Deployment Engineer, Code Reviewer | None |
+| 23 | Performance & Load Engineer | Cross-cutting / 3 — Hardening | `E+T` | Orchestrator | None |
+| 24 | Visual & Design-System Designer | 0 — Discovery & Design | `E` (docs only) | Orchestrator | None |
+| 25 | AI & Prompt Engineer | 2 — Build (conditional) | `E+T` | Orchestrator | None |
+| 26 | Privacy & Compliance Officer | Cross-cutting (conditional) | `R`, `E` on request | Orchestrator | None |
+
+Agents `01`–`20` are the core roster; `21`–`26` are expansion agents (see the dedicated section after Phase 4). `25` and `26` are conditional — engaged only when the packet calls for AI behavior or regulated/PII handling.
 
 ---
 
@@ -286,6 +294,72 @@ All build agents share two universal boundaries: they work only from an approved
 **Tools:** `E` restricted to documentation.
 
 **Invocation:** Called by the Orchestrator after code review and before the release gate. Calls no one. User-invocable: **yes**.
+
+---
+
+## Expansion Agents (21–26)
+
+These agents extend the core roster for concerns the original twenty either folded into a neighbor or left implicit: cloud provisioning, infrastructure review, non-functional performance, visual/design-system authoring, in-product AI, and legal/regulatory data obligations. Each is opt-in per case (see `playbooks/README.md`). The author/reviewer separation and star call-graph rules apply unchanged — `21` authors infrastructure and `22` reviews it, exactly as `04`↔`08`. Agents `25` and `26` are conditional, engaged only when the packet calls for AI behavior or regulated/PII handling.
+
+### 21 — Infrastructure & Platform Engineer
+
+**Does:** Provisions the cloud/runtime platform as infrastructure-as-code (Terraform/CDK/Pulumi or stack equivalent): network topology (VPC/subnets/security groups), managed data stores and caches, the secret store, DNS and TLS, the CDN, least-privilege IAM roles/policies, and the compute/runtime targets the application deploys onto. Plan-before-apply and idempotent; never applies destructively to shared or production state without recorded human approval.
+
+**Scope:** Owns the platform IaC — network, managed data stores/caches, secret store (not values), DNS/TLS, CDN, IAM (least privilege), compute/runtime targets, and the region/residency/cost posture. Never authors pipeline logic, deployment manifests, or the application deployment (that is the CI/CD & Deployment Engineer's boundary — 21 provisions targets, 19 deploys onto them); never implements application code, schemas, or data; never embeds secret values; never grants wildcard IAM or broad ingress without design justification; never applies a destructive or shared/production change without recorded human approval (mirrors the Data & Migration Engineer destructive-migration rule). Traces to packet §11 (scale/reliability), §14 (cloud/cost), §9 (data residency), §7 (external services). Reviewed by the Infrastructure Guardian (22).
+
+**Tools:** `E+T` (terminal scoped to project-local IaC plan/validate/format; any apply to shared/remote/production state is gated on recorded human approval).
+
+**Invocation:** Called by the Orchestrator to stand up or evolve the platform in Phase 4 — Delivery, before or alongside the CI/CD & Deployment Engineer's release work. Calls no one. User-invocable: **yes**.
+
+### 22 — Infrastructure Guardian
+
+**Does:** Reviews — never authors — infrastructure-as-code and deployment configuration, the reviewing counterpart to the Infrastructure & Platform Engineer's authoring role. Checks least-privilege IAM, network exposure and public surface, state-file safety, destructive-change detection in plans/change-sets (resource replacement, deletion, stateful recreation), drift, resource right-sizing with cost relevance, secret handling in infra config, and multi-environment parity.
+
+**Scope:** Owns infrastructure findings and the infrastructure findings register (written to `runs/<run-id>/findings/infrastructure/`), and the destructive-change verdict on every reviewed plan or change-set. Never edits files, never runs provisioning commands, never authors or fixes IaC, never approves a destructive change, public exposure, secret in config, or broad IAM grant lacking packet-traceable justification, never routes or invokes an agent. Traces decisions to packet §7, §9, §11, §14 (plus §8 permissions and §16 approval authority).
+
+**Tools:** `R`. Read and search only — inspects IaC sources, plan/change-set output, manifests, IAM/network/state config; executes nothing.
+
+**Invocation:** Called by the Orchestrator at provisioning checkpoints, and by the CI/CD & Deployment Engineer or the Code Reviewer when a diff touches IaC. Calls no one; recommends a remediating agent (usually the Infrastructure & Platform Engineer, or the CI/CD & Deployment Engineer for pipeline issues) and hands back to the Orchestrator. User-invocable: **yes** (e.g., to review a `terraform plan` before an apply).
+
+### 23 — Performance & Load Engineer
+
+**Does:** Owns non-functional performance the way the Security Engineer owns security. Derives performance budgets/SLOs from packet §11 (scale & reliability) and the critical journeys in §3; designs and runs load, stress, soak, and spike suites; profiles hot paths; validates latency, throughput, and resource headroom against budget under the peak that matters; flags regressions. Distinct from the Validation & Test Engineer (17, functional correctness) and the Observability Engineer (16, instrumentation) — it consumes 16's signals as measurement input and complements 17 with non-functional proof.
+
+**Scope:** Owns the performance budget/SLO derivation, the load/stress/soak/spike suites and their fixtures, the profiling harnesses and hot-path analysis, and the performance findings record (written to `runs/<run-id>/findings/performance/`). Never weakens or quietly raises a budget to pass a number, never changes business behavior/contracts/schemas/telemetry to improve a number (reports the bottleneck and hands off to the owning implementer), never takes over functional-correctness testing, and never drives load against a real third-party provider or production without explicit recorded human approval.
+
+**Tools:** `E+T` (terminal needed to run load tooling and profilers against the local runtime or a designated staging environment that uses provider fakes).
+
+**Invocation:** Called by the Orchestrator at a Phase 3 hardening checkpoint (once behavior stabilizes) and again as a pre-release performance gate, cross-cutting in parallel with the Security Engineer. Calls no one. User-invocable: **yes**.
+
+### 24 — Visual & Design-System Designer
+
+**Does:** The visual and aesthetic counterpart to the UX Flow Designer (03). Translates the packet's branding and accessibility section into a design system: design tokens (color, type scale, spacing, radius, elevation, motion), component visual specs and their visual states, light/dark theming, responsive breakpoints, and accessibility compliance (contrast, focus, reduced motion) — all attached to the UX inventory's screens and route-states. Optional for API-only or headless projects.
+
+**Scope:** Owns the design-token set, component visual specs, theming, breakpoints, and accessibility compliance constraints. Never implements components or stylesheets (that is the Frontend Feature Builder, which consumes this spec), never defines flows, screens, or route states (that is the UX Flow Designer), never defines API contracts, never overrides branding or accessibility requirements from the packet.
+
+**Tools:** `E` restricted to design documents. No application code.
+
+**Invocation:** Called by the Orchestrator after the UX Flow Designer's interface inventory is available, for any project with user-facing screens; feeds the Frontend Feature Builder (14). Calls no one. User-invocable: **yes**.
+
+### 25 — AI & Prompt Engineer
+
+**Does:** Owns the AI/LLM behavior of the product itself (not the build pipeline): prompt design and versioning, model selection with a decision record, an evaluation harness (golden sets + regression), guardrails (prompt-injection defense, output validation/schema enforcement, refusal/safety), retrieval/RAG wiring, token and cost budgets, and graceful fallback/degradation. Conditional and opt-in — runs only when the packet (§4 features, §7 external services) specifies AI behavior.
+
+**Scope:** Owns prompts and prompt versions, the model-selection decision record, the eval harness, AI guardrails, RAG wiring above the adapter, token/cost budgets, fallback behavior, and AI-specific configuration. Never reimplements the raw provider adapter, transport, or credential wiring (Integration Engineer 12 owns that), never authors API contracts (Contract & Client Guardian 10), never implements the surrounding domain logic (Backend Domain Implementer 13), never sends more user data to the model than §9 allows, never chooses a model §14 disallows or exceeds the cost/token budget silently, and never weakens a guardrail or eval to ship.
+
+**Tools:** `E+T` (terminal for running evals against local fixtures, tests, and builds; large or expensive production model runs require explicit human approval).
+
+**Invocation:** Called by the Orchestrator once per AI feature, only on runs with AI behavior in the packet. Calls no one. User-invocable: **yes**, to design or rework a single AI feature's prompts, evals, or guardrails.
+
+### 26 — Privacy & Compliance Officer
+
+**Does:** Reviews personal-data behavior against the packet's legal and regulatory obligations — lawful basis and consent, data minimization, retention and deletion enforcement, data residency, data-subject rights (access/erasure/portability), DPIA need, audit-trail-as-legal-record, and third-party processor exposure. Distinct lens from the Security Engineer (15): 15 owns the attack surface, 26 owns the legal/regulatory data obligations. Operates read-only for review; switches to edit-capable only when explicitly tasked to author a compliance artifact (e.g., a data-retention policy or records-of-processing document). Conditional — engaged only for regulated or PII-heavy domains.
+
+**Scope:** Owns compliance findings by severity, the personal-data obligations assessment, and (when tasked) compliance artifacts such as the data-retention policy, RoPA, data-subject-rights procedure, and DPIA determination record. Never weakens a legal control for convenience, never approves processing without a packet-traceable lawful basis, never approves retention beyond §9 or residency/processor exposure the packet forbids, never edits application code or files outside an explicit authoring task, and never substitutes for the Security Engineer's review.
+
+**Tools:** `R` by default; `E` only under an explicit authoring task.
+
+**Invocation:** Called by the Orchestrator, conditionally, at fixed checkpoints for regulated or PII-heavy domains (after data design, after each integration that touches personal data, pre-release) and ad hoc when a change touches personal-data handling. Calls no one; recommends a remediating agent (11 for retention/deletion, 12 for processor exposure, 13 for rights endpoints/audit-as-record, 15 for attack-surface findings) and hands back to 01. User-invocable: **yes**.
 
 ---
 
