@@ -6,14 +6,14 @@
 # This script DERIVES the other platforms' layouts from it; never hand-edit the derived
 # folders (.claude/agents, .cursor/rules) — re-run this instead.
 #
-# Installs GLOBALLY by default (user-level config: ~/.claude, ~/.cursor). Pass
+# Installs GLOBALLY by default (user-level config: ~/.claude, ~/.cursor, ~/.github). Pass
 # --scope project --path <dir> to install into a specific project instead.
 #
 # Usage:
 #   scripts/install.sh --target claude                            # global  -> ~/.claude
 #   scripts/install.sh --target claude --scope project --path DIR # project -> DIR/.claude
 #   scripts/install.sh --target cursor                            # global  -> ~/.cursor/rules
-#   scripts/install.sh --target copilot                           # print guidance (agents already native)
+#   scripts/install.sh --target copilot                           # global  -> ~/.github (agents+skills)
 #   scripts/install.sh --target plugin                            # regenerate this repo's plugin dirs
 #
 # Flags:
@@ -191,23 +191,40 @@ convert_cursor() {
   echo "Note: Cursor has no native orchestrator — drive the run manually in chat (see PORTABILITY.md)."
 }
 
-print_copilot() {
-  cat <<'EOF'
-GitHub Copilot / VS Code: the agents are already native at .github/agents/*.agent.md.
-  1. Copy the .github/ folder into your repo (verify the agents path your VS Code/Copilot
-     version expects; only the location may differ).
-  2. Skills: convert .github/skills/creating-stakeholder-packet/SKILL.md to a
-     .github/prompts/*.prompt.md, or follow it manually before the first run.
-  3. Start a run by invoking the `delivery-orchestrator` agent with the packet.
-See PORTABILITY.md for the agent-to-agent invocation caveat.
-EOF
+# GitHub Copilot / VS Code: the agents are already in the native *.agent.md format, so we
+# COPY them (no conversion) into the Copilot config dir. Global install targets the
+# editor-agnostic user-level convention ~/.github/{agents,skills}; a project install writes
+# <path>/.github/{agents,skills}. Skills reuse the SKILL.md folder layout. VS Code users
+# whose profile lives elsewhere can point chat.agentFilesLocations / chat.agentSkillsLocations
+# at this folder (absolute path — VS Code does not expand ~).
+copy_copilot_agents() {
+  local out_dir="$1"; mkdir -p "$out_dir"
+  local count=0 src base dest
+  for src in "$AGENTS_SRC"/*.agent.md; do
+    [[ -e "$src" ]] || continue
+    base="$(basename "$src" .agent.md)"
+    [[ "$base" == "test" ]] && continue          # skip the editor scaffold
+    dest="$out_dir/$base.agent.md"
+    cp "$src" "$dest"
+    count=$((count+1))
+  done
+  echo "  $count agents -> $out_dir/"
+}
+
+convert_copilot() {
+  copy_copilot_agents "$DEST/.github/agents"
+  install_skills "$DEST/.github/skills"
+  echo "Done. Start a run by invoking the 'delivery-orchestrator' agent with the packet."
+  echo "Note (VS Code): if agents/skills aren't auto-detected, add this folder via"
+  echo "      chat.agentFilesLocations / chat.agentSkillsLocations (absolute path, no ~)."
+  echo "See PORTABILITY.md for the agent-to-agent invocation caveat."
 }
 
 echo "agents-factory install — target: $TARGET, scope: ${SCOPE:-n/a}, dest: $DEST"
 case "$TARGET" in
   claude)  convert_claude ;;
   cursor)  convert_cursor ;;
-  copilot) print_copilot ;;
+  copilot) convert_copilot ;;
   plugin)  convert_plugin ;;
   *) echo "unknown target: $TARGET (use claude | copilot | cursor | plugin)" >&2; exit 1 ;;
 esac
