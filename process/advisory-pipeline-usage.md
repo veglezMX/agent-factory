@@ -69,10 +69,12 @@ review you want, optionally naming the agents and order. The orchestrator then:
 1. Derives a `<query-id>` from your request (you may override it) and creates
    `agents-run/orchestrator-<query-id>/`.
 2. For each step, dispatches one agent with two things in its prompt: the **input file
-   path(s)** to read (the previous agents' outputs) and the **output file path** to write
-   (`<agent-name>-output.md`).
-3. The agent reads the real target code (read-only) plus its input files, writes its
-   findings to its one output file, and returns a one-line confirmation.
+   path(s)** to read (the previous agents' outputs) and the **output file path** for its
+   findings (`<agent-name>-output.md`).
+3. The agent reads the real target code (read-only) plus its input files and produces its
+   findings. Write-capable review agents write their own output file; the strictly
+   read-only reviewers (which have no write tool, by design) return their findings and the
+   orchestrator writes the file for them. Either way the findings land in the file.
 4. The orchestrator passes that file's path to the next agent, and so on.
 5. At the end it presents the synthesized findings and asks you to **accept** (one
    interactive checkpoint — no gate file).

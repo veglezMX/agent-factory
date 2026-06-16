@@ -117,11 +117,24 @@ read-only / review-mode agents whose output is *findings*, not product code:
   `27 accessibility-auditor` — **review mode only**, never `mode: edit`.
 
 The implementer agents stay out of scope: their artifacts are the product itself, which is
-a different machinery (`run-delivery` / `runs/`). The one nuance worth noting: most of
-these advisory agents *already* have `Edit`/`Write` in their tool posture for their
-edit-mode duties. In this pipeline they use that write capability for exactly one thing —
-writing their own `*-output.md` to the run folder — and nothing else. The orchestrator's
-prompt makes that boundary explicit.
+a different machinery (`run-delivery` / `runs/`).
+
+**Who writes the output file depends on the agent's posture** — and this matters because
+the read-only reviewers have *no write tool at all*, by design (their containment guarantee
+in delivery runs depends on it). We do **not** weaken that posture for advisory use. Instead:
+
+- **Write-capable agents** (`requirements-analyst`, `security-engineer`,
+  `privacy-compliance-officer`, `accessibility-auditor` — posture includes `edit`) write
+  their own `*-output.md` to the run folder and return a one-line confirmation. Their single
+  permitted write target is that one file; the subject repo stays read-only.
+- **Read-only agents** (`architecture-guardian`, `code-reviewer`, `infrastructure-guardian`,
+  `bundle-intake-validator`, `product-planner` — no `edit`) cannot write, so they **return
+  the findings document as their final message and the orchestrator writes it** to the output
+  path. On Claude Code only an agent's final message returns (not its working transcript), so
+  this is bounded; the orchestrator still carries only *paths* forward to the next agent.
+
+Either way the findings end up in the file, and downstream agents read from the file — the
+hand-off medium is still the filesystem, never the orchestrator's memory of a return.
 
 ---
 
@@ -190,24 +203,26 @@ findings/decision gate — terminate on acceptance, no canonical promotion.
 
 ---
 
-## 8. Proposed deliverables (if approved)
+## 8. Deliverables — implemented
 
-1. **An orchestrator driver** — `commands/run-advisory.md` (working name), sibling to
-   `run-delivery.md`, that:
+1. **The orchestrator driver** — `.claude/commands/run-advisory.md` (source of truth) +
+   `commands/run-advisory.md` (plugin component copy). It:
    - derives `<query-id>` and creates `agents-run/orchestrator-<query-id>/`;
-   - selects the advisory agents and order (from the user's list, a mini-playbook, or
-     inference);
+   - selects the advisory agents and order (from the user's list or by inference);
    - for each step, dispatches one agent via `Task` with **input path(s) + output path** in
-     the prompt;
+     the prompt, applying the §4 posture split for who writes the file;
    - keeps only paths and a short progress note in context — never the payloads;
    - ends with one `AskUserQuestion` acceptance checkpoint and a synthesized summary.
-2. **A one-page "advisory output file" convention** — §6, either an appendix to the handoff
-   protocol or a sibling doc.
-3. **(Optional) advisory mini-playbooks** — common chains (e.g. brownfield review:
-   requirements-analyst → architecture-guardian → security-engineer → code-reviewer).
+2. **`install.sh`** generalized to copy *all* `.claude/commands/*.md` (not just
+   `run-delivery`) into both the Claude target and the marketplace plugin.
+3. **`.gitignore`** ignores `agents-run/` (advisory runs are throwaway by default).
+4. **User guide** — `process/advisory-pipeline-usage.md` (orchestrator mode vs. single-agent
+   run). The output-file convention is §6 of this proposal.
 
-The agent files need **no hard changes** for v1 — the read-input/write-output instruction
-is supplied by the orchestrator at dispatch time (§3), and direct invocation is unaffected.
+The agent files need **no changes** — the read-input/write-output instruction is supplied by
+the orchestrator at dispatch time (§3), the posture split (§4) means no read-only agent is
+granted new write power, and direct invocation is unaffected. (Optional future work: advisory
+mini-playbooks for common chains, and a pre-write hook to hard-scope writes to `agents-run/`.)
 
 ---
 

@@ -138,14 +138,20 @@ gen_agents() {
 }
 
 convert_claude() {
+  local cmd dest
   gen_agents "$DEST/.claude/agents"
   install_skills "$DEST/.claude/skills"
-  if [[ ! -f "$DEST/.claude/commands/run-delivery.md" && -f "$ROOT/.claude/commands/run-delivery.md" ]]; then
+  if [[ -d "$ROOT/.claude/commands" ]]; then
     mkdir -p "$DEST/.claude/commands"
-    cp "$ROOT/.claude/commands/run-delivery.md" "$DEST/.claude/commands/"
-    echo "  driver -> $DEST/.claude/commands/run-delivery.md"
+    for cmd in "$ROOT/.claude/commands"/*.md; do
+      [[ -e "$cmd" ]] || continue
+      dest="$DEST/.claude/commands/$(basename "$cmd")"
+      [[ -f "$dest" ]] && continue                  # don't clobber a user's local edits
+      cp "$cmd" "$dest"
+      echo "  driver -> $dest"
+    done
   fi
-  echo "Done. Start a run with:  /run-delivery <run-id>"
+  echo "Done. Start a delivery run with:  /run-delivery <run-id>   or an advisory review with:  /run-advisory \"<topic>\""
 }
 
 # Claude Code marketplace plugin: components live at repo root (agents/ skills/
@@ -153,13 +159,15 @@ convert_claude() {
 # manifests (.claude-plugin/plugin.json + marketplace.json) are tracked, not
 # generated — this only refreshes the derived component dirs.
 convert_plugin() {
+  local cmd
   gen_agents "$DEST/agents"
   install_skills "$DEST/skills"
   mkdir -p "$DEST/commands"
-  if [[ -f "$ROOT/.claude/commands/run-delivery.md" ]]; then
-    cp "$ROOT/.claude/commands/run-delivery.md" "$DEST/commands/run-delivery.md"
-    echo "  driver -> $DEST/commands/run-delivery.md"
-  fi
+  for cmd in "$ROOT/.claude/commands"/*.md; do
+    [[ -e "$cmd" ]] || continue
+    cp "$cmd" "$DEST/commands/$(basename "$cmd")"
+    echo "  driver -> $DEST/commands/$(basename "$cmd")"
+  done
   if [[ -f "$DEST/.claude-plugin/plugin.json" ]]; then
     echo "  manifest present -> $DEST/.claude-plugin/plugin.json"
   else
