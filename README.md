@@ -61,6 +61,9 @@ scripts/install.sh --target cursor
 # GitHub Copilot / VS Code — copies native agents + skills -> ~/.github/ (no conversion)
 scripts/install.sh --target copilot   # add --scope project --path <dir> for one project
 
+# Generic ".agents" harness — one Roo Code custom-mode YAML per agent -> ~/.agents/
+scripts/install.sh --target agents    # add --scope project --path <dir> for one project
+
 # Claude Code marketplace plugin — regenerates this repo's root agents/ skills/ commands/ (+ .claude-plugin/ manifests)
 scripts/install.sh --target plugin
 ```

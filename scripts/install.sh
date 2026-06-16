@@ -14,10 +14,11 @@
 #   scripts/install.sh --target claude --scope project --path DIR # project -> DIR/.claude
 #   scripts/install.sh --target cursor                            # global  -> ~/.cursor/rules
 #   scripts/install.sh --target copilot                           # global  -> ~/.github (agents+skills)
+#   scripts/install.sh --target agents                            # global  -> ~/.agents (Roo Code custom-mode format)
 #   scripts/install.sh --target plugin                            # regenerate this repo's plugin dirs
 #
 # Flags:
-#   --target  claude | cursor | copilot | plugin   (default: claude)
+#   --target  claude | cursor | copilot | agents | plugin   (default: claude)
 #   --scope   global | project                     (default: global)
 #   --path    DIR   project root (required when --scope project)
 #   --dest    DIR   alias for "--scope project --path DIR" (back-compat)
@@ -220,11 +221,107 @@ convert_copilot() {
   echo "See PORTABILITY.md for the agent-to-agent invocation caveat."
 }
 
+# --- Generic ".agents" target (Roo Code custom-mode format) --------------------
+# Some harnesses load a directory of per-agent files instead of one platform config.
+# This emits one YAML file per agent under <dest>/.agents/, each a single Roo Code
+# custom-mode object (slug / name / roleDefinition / whenToUse / groups /
+# customInstructions). Roo Code itself natively reads a single .roomodes file with a
+# customModes: array — see PORTABILITY.md for that caveat.
+
+# VS Code tool id -> Roo Code tool group. Roo groups are coarse: read, edit, browser,
+# command, mcp. "search" folds into read; "todo"/"agent"/"vscode" have no group.
+map_tool_group() {
+  case "$1" in
+    read|search) echo "read" ;;
+    edit)        echo "edit" ;;
+    execute)     echo "command" ;;
+    web|fetch)   echo "browser" ;;
+    *)           echo "" ;;
+  esac
+}
+
+# Given a raw "tools:" line, emit a Roo-style "groups: [a, b]" line (deduped, ordered).
+roo_groups_line() {
+  local line="$1" id mapped g ordered=() ; declare -A seen=()
+  for id in $(grep -oE '"[a-zA-Z]+"' <<<"$line" | tr -d '"'); do
+    mapped="$(map_tool_group "$id")"
+    [[ -n "$mapped" ]] && seen[$mapped]=1
+  done
+  for g in read edit browser command mcp; do
+    [[ -n "${seen[$g]:-}" ]] && ordered+=("$g")
+  done
+  [[ ${#ordered[@]} -eq 0 ]] && ordered=("read")
+  local joined; joined="$(printf '%s, ' "${ordered[@]}")"; joined="${joined%, }"
+  echo "groups: [$joined]"
+}
+
+# requirements-analyst -> "Requirements Analyst"
+title_case() { echo "$1" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g'; }
+
+# Convert .github/agents/*.agent.md into Roo Code per-agent YAML in <out_dir>.
+# Text fields use literal block scalars (|-) so the Markdown bodies need no escaping:
+# every non-blank line is indented by 4 spaces; blank lines stay empty. roleDefinition
+# is the body's "You are …" persona paragraph (the bodies vary — some open with a
+# heading — so we target that line, not just the first paragraph); customInstructions
+# is the full body verbatim, so the agent's complete operating manual is preserved.
+gen_agents_roo() {
+  local out_dir="$1"; mkdir -p "$out_dir"
+  local count=0 src base slug name desc dest role
+  for src in "$AGENTS_SRC"/*.agent.md; do
+    [[ -e "$src" ]] || continue
+    base="$(basename "$src" .agent.md)"
+    [[ "$base" == "test" ]] && continue          # skip the editor scaffold
+    slug="$(field_value "$src" name)"; [[ -n "$slug" ]] || slug="$base"
+    name="$(title_case "$slug")"
+    desc="$(field_value "$src" description)"
+    # persona paragraph: the "You are …" block, up to the next blank line
+    role="$(awk 'BEGIN{fm=0;cap=0}
+                 /^---[[:space:]]*$/{fm++; next}
+                 fm>=2{
+                   if(!cap){ if($0 ~ /^You are/) cap=1; else next }
+                   if($0 ~ /^[[:space:]]*$/) exit
+                   print $0
+                 }' "$src")"
+    [[ -n "$role" ]] || role="$desc"             # fallback if no "You are" line
+    dest="$out_dir/$base.yaml"
+    {
+      echo "slug: $slug"
+      echo "name: $name"
+      echo "roleDefinition: |-"
+      printf '%s\n' "$role" | sed 's/^./    &/'
+      if [[ -n "$desc" ]]; then
+        echo "whenToUse: |-"
+        printf '    %s\n' "$desc"
+      fi
+      roo_groups_line "$(grep -m1 '^tools:' "$src" || true)"
+      echo "customInstructions: |-"
+      # the full body, verbatim, from its first non-blank line
+      awk 'BEGIN{fm=0;started=0}
+           /^---[[:space:]]*$/{fm++; next}
+           fm>=2{
+             if(!started){ if($0 ~ /^[[:space:]]*$/) next; started=1 }
+             if($0 ~ /^[[:space:]]*$/) print ""; else print "    " $0
+           }' "$src"
+    } > "$dest"
+    count=$((count+1))
+  done
+  echo "  $count agents -> $out_dir/ (Roo Code custom-mode format)"
+}
+
+convert_agents() {
+  gen_agents_roo "$DEST/.agents"
+  install_skills "$DEST/.agents/skills"
+  echo "Done. Point your harness at $DEST/.agents (one custom-mode YAML per agent)."
+  echo "Note: Roo Code itself reads a single .roomodes (customModes: array); these per-agent"
+  echo "      files target generic .agents-style loaders. See PORTABILITY.md."
+}
+
 echo "agents-factory install — target: $TARGET, scope: ${SCOPE:-n/a}, dest: $DEST"
 case "$TARGET" in
   claude)  convert_claude ;;
   cursor)  convert_cursor ;;
   copilot) convert_copilot ;;
+  agents)  convert_agents ;;
   plugin)  convert_plugin ;;
-  *) echo "unknown target: $TARGET (use claude | copilot | cursor | plugin)" >&2; exit 1 ;;
+  *) echo "unknown target: $TARGET (use claude | copilot | cursor | agents | plugin)" >&2; exit 1 ;;
 esac

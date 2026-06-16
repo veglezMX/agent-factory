@@ -13,17 +13,17 @@ This framework is authored once and run on several AI coding platforms. This doc
 | **Agent directory + filename** | ❌ Platform-specific | `.github/agents/*.agent.md` (Copilot) vs `.claude/agents/*.md` (Claude) vs `.cursor/rules/*.mdc` (Cursor). |
 | **Orchestration** (01 invoking others) | ❌ Platform-specific | Depends on whether your harness lets one agent call another, or only the main loop dispatches. |
 
-**Bottom line:** the *thinking* is fully portable; the *wiring* is not. `scripts/install.sh` handles the wiring for Claude Code and Cursor; Copilot is already native.
+**Bottom line:** the *thinking* is fully portable; the *wiring* is not. `scripts/install.sh` handles the wiring for Claude Code, Cursor, and the Roo Code / `.agents` format; Copilot is already native.
 
 ---
 
 ## Directory mapping
 
-| Artifact | Claude Code | GitHub Copilot / VS Code | Cursor | Generic harness |
+| Artifact | Claude Code | GitHub Copilot / VS Code | Cursor | Roo Code / `.agents` |
 |---|---|---|---|---|
-| Agents | `.claude/agents/*.md` *(generated)* | `.github/agents/*.agent.md` *(source of truth)* | `.cursor/rules/*.mdc` *(reference)* | your agent dir |
-| Skills | `.claude/skills/<name>/SKILL.md` | `.github/prompts/*.prompt.md` or manual | manual prompt | manual |
-| Orchestrator start | `/run-delivery <run-id>` (main loop) | invoke `delivery-orchestrator` agent | drive in main chat | main loop dispatches |
+| Agents | `.claude/agents/*.md` *(generated)* | `.github/agents/*.agent.md` *(source of truth)* | `.cursor/rules/*.mdc` *(reference)* | `.agents/*.yaml` *(generated, custom-mode format)* |
+| Skills | `.claude/skills/<name>/SKILL.md` | `.github/prompts/*.prompt.md` or manual | manual prompt | `.agents/skills/<name>/SKILL.md` |
+| Orchestrator start | `/run-delivery <run-id>` (main loop) | invoke `delivery-orchestrator` agent | drive in main chat | switch to the `delivery-orchestrator` mode |
 | Run state | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` |
 | Process docs | `process/`, `templates/` | same | same | same |
 
@@ -33,18 +33,20 @@ This framework is authored once and run on several AI coding platforms. This doc
 
 The roster assigns each agent a **posture**, not a fixed tool list. Translate the posture to your platform:
 
-| Posture | Meaning | VS Code / Copilot ids | Claude Code tools |
-|---|---|---|---|
-| `R` | read-only | `read`, `search` | `Read, Grep, Glob` |
-| `E` | edit | `read`, `search`, `edit` | `Read, Grep, Glob, Edit, Write` |
-| `E+T` | edit + terminal | `read`, `search`, `edit`, `execute`, `todo` | `Read, Grep, Glob, Edit, Write, Bash, TodoWrite` |
-| `O` | orchestration | `agent` (+ `read`) | `Task` (+ `Read`) — **must run as the main loop on Claude Code** |
+| Posture | Meaning | VS Code / Copilot ids | Claude Code tools | Roo Code groups |
+|---|---|---|---|---|
+| `R` | read-only | `read`, `search` | `Read, Grep, Glob` | `read` |
+| `E` | edit | `read`, `search`, `edit` | `Read, Grep, Glob, Edit, Write` | `read, edit` |
+| `E+T` | edit + terminal | `read`, `search`, `edit`, `execute`, `todo` | `Read, Grep, Glob, Edit, Write, Bash, TodoWrite` | `read, edit, command` |
+| `O` | orchestration | `agent` (+ `read`) | `Task` (+ `Read`) — **must run as the main loop on Claude Code** | `read` (Roo switches modes natively) |
 
 The converter applies this id→name map automatically:
 
 ```
-read → Read   |   search → Grep, Glob   |   edit → Edit, Write
-execute → Bash   |   todo → TodoWrite   |   agent → Task   |   web/fetch → WebFetch, WebSearch
+Claude Code:  read → Read   |   search → Grep, Glob   |   edit → Edit, Write
+              execute → Bash   |   todo → TodoWrite   |   agent → Task   |   web/fetch → WebFetch, WebSearch
+Roo Code:     read/search → read   |   edit → edit   |   execute → command   |   web/fetch → browser
+              todo, agent, vscode → (no group; Roo's groups are coarse — read, edit, browser, command, mcp)
 ```
 
 ---
@@ -75,6 +77,14 @@ execute → Bash   |   todo → TodoWrite   |   agent → Task   |   web/fetch �
 1. Run `scripts/install.sh --target cursor`. By default it installs **globally** to `~/.cursor/rules`; add `--scope project --path <dir>` for one project's `.cursor/rules/`. It writes `<name>.mdc` — each agent body as a reference rule with `alwaysApply: false`, so you can `@`-mention the one you need.
 2. Cursor has no native multi-agent orchestrator. Drive the run in the main chat: act as the orchestrator yourself (or paste the `delivery-orchestrator` rule), invoke each agent rule in playbook order, and write handoff files under `runs/<run-id>/` between steps.
 
+### Roo Code / generic `.agents` harness
+
+Some harnesses load a **directory of per-agent files** rather than one platform config. This target emits the roster in **Roo Code's custom-mode format** — one YAML file per agent — which those loaders (and Roo Code itself, after a small step) can consume.
+
+1. Run `scripts/install.sh --target agents`. By default it installs **globally** to `~/.agents`; add `--scope project --path <dir>` for one project's `.agents/`. It writes `<name>.yaml` for each agent, each a single custom-mode object: `slug`, `name`, `roleDefinition` (the agent's `You are …` persona), `whenToUse` (the agent's description), `groups` (the posture mapped to Roo's `read`/`edit`/`command`/`browser`), and `customInstructions` (the full agent body verbatim). Skills install as their `SKILL.md` folders under `.agents/skills/`.
+2. **Roo Code caveat:** Roo natively reads a **single `.roomodes`** file at the workspace root with a top-level `customModes:` array — not a folder of files. To use these on Roo directly, merge them into `.roomodes` by listing each file's contents as one entry under `customModes:` (indent each agent object by two spaces beneath the array). Generic `.agents`-style loaders consume the per-file layout as-is.
+3. Start a run by switching to the **`delivery-orchestrator`** mode (slug `delivery-orchestrator`) and pointing it at the packet. The same agent-to-agent caveat as Copilot applies: if your harness can't let one mode invoke another, drive the sequence yourself in playbook order, writing handoff files under `runs/<run-id>/`.
+
 ### Generic / any agent harness
 
 The framework is a **specification**, not a binding. To port it:
@@ -101,4 +111,4 @@ Full semantics: [`process/agent-handoff-protocol.md`](process/agent-handoff-prot
 
 ## Keeping copies in sync
 
-`.github/agents/` is the **source of truth**. After editing an agent there, re-run `scripts/install.sh --target claude` (and `--target cursor`) to regenerate the derived folders. Skills are mirrored in `.github/skills/` and `.claude/skills/`; edit one and copy to the other (they are kept byte-identical). Do not hand-edit `.claude/agents/` — your changes will be overwritten on the next conversion.
+`.github/agents/` is the **source of truth**. After editing an agent there, re-run `scripts/install.sh --target claude` (and `--target cursor` / `--target agents`) to regenerate the derived folders. Skills are mirrored in `.github/skills/` and `.claude/skills/`; edit one and copy to the other (they are kept byte-identical). Do not hand-edit the generated `.claude/agents/` or `.agents/` files — your changes will be overwritten on the next conversion.
