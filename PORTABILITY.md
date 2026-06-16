@@ -66,9 +66,9 @@ Roo Code:     read/search → read   |   edit → edit   |   execute → command
 
 ### GitHub Copilot / VS Code
 
-1. Run `scripts/install.sh --target copilot`. The agents are **already in the native `*.agent.md` format**, so it copies (no conversion) the agents and skills into the user-level Copilot dir `~/.github/{agents,skills}` by default. Add `--scope project --path <dir>` to install into one project's `.github/` instead.
-2. **VS Code caveat:** VS Code's *own* user profile lives elsewhere (Linux `~/.config/Code/User/…`, macOS `~/Library/Application Support/Code/User/…`). If the agents/skills aren't auto-detected, point `chat.agentFilesLocations` / `chat.agentSkillsLocations` at the install folder using an **absolute** path (VS Code does not expand `~`). Visual Studio / Copilot use `~/.github/agents` by default, so no extra config there.
-3. Skills install as their `SKILL.md` folders (used via `chat.agentSkillsLocations`). If your Copilot build has no skills runtime, open `creating-stakeholder-packet/SKILL.md` and follow it manually before the first run.
+1. Run `scripts/install.sh --target copilot`. The agents are **already in the native `*.agent.md` format**, so it copies (no conversion) the agents and skills into the Copilot CLI personal dir `~/.copilot/{agents,skills}` by default (override the location with the `COPILOT_HOME` env var). Add `--scope project --path <dir>` to install into a repo's project-level `.github/{agents,skills}` instead.
+2. Skills install as their `SKILL.md` folders (`~/.copilot/skills/` globally, `.github/skills/` per project). Run `/skills list` in the CLI to confirm they're picked up. If your Copilot build has no skills runtime, open `creating-stakeholder-packet/SKILL.md` and follow it manually before the first run.
+3. **VS Code note:** the global dir above is the **Copilot CLI** convention. VS Code reads a repo's `.github/` (use `--scope project`) or its own profile dir; if you need a custom user-level folder there, point `chat.agentFilesLocations` / `chat.agentSkillsLocations` at it with an **absolute** path (VS Code does not expand `~`).
 4. Start a run by invoking the **`delivery-orchestrator`** agent and pasting/pointing at the packet.
 5. **Caveat:** whether `delivery-orchestrator` can invoke the other agents depends on your Copilot version's agent-to-agent support. If it can't, drive the sequence yourself: invoke each agent in playbook order, pasting the prior handoff as input.
 

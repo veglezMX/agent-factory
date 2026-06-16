@@ -58,8 +58,8 @@ scripts/install.sh --target claude --scope project --path /path/to/your/project
 # Cursor — global install -> ~/.cursor/rules  (add --scope project --path <dir> for one project)
 scripts/install.sh --target cursor
 
-# GitHub Copilot / VS Code — copies native agents + skills -> ~/.github/ (no conversion)
-scripts/install.sh --target copilot   # add --scope project --path <dir> for one project
+# GitHub Copilot CLI — copies native agents + skills -> ~/.copilot/ (no conversion)
+scripts/install.sh --target copilot   # add --scope project --path <dir> for a repo's .github/
 
 # Generic ".agents" harness — one Roo Code custom-mode YAML per agent -> ~/.agents/
 scripts/install.sh --target agents    # add --scope project --path <dir> for one project

@@ -6,14 +6,14 @@
 # This script DERIVES the other platforms' layouts from it; never hand-edit the derived
 # folders (.claude/agents, .cursor/rules) — re-run this instead.
 #
-# Installs GLOBALLY by default (user-level config: ~/.claude, ~/.cursor, ~/.github). Pass
+# Installs GLOBALLY by default (user-level config: ~/.claude, ~/.cursor, ~/.copilot). Pass
 # --scope project --path <dir> to install into a specific project instead.
 #
 # Usage:
 #   scripts/install.sh --target claude                            # global  -> ~/.claude
 #   scripts/install.sh --target claude --scope project --path DIR # project -> DIR/.claude
 #   scripts/install.sh --target cursor                            # global  -> ~/.cursor/rules
-#   scripts/install.sh --target copilot                           # global  -> ~/.github (agents+skills)
+#   scripts/install.sh --target copilot                           # global  -> ~/.copilot (agents+skills)
 #   scripts/install.sh --target agents                            # global  -> ~/.agents (Roo Code custom-mode format)
 #   scripts/install.sh --target plugin                            # regenerate this repo's plugin dirs
 #
@@ -192,12 +192,11 @@ convert_cursor() {
   echo "Note: Cursor has no native orchestrator — drive the run manually in chat (see PORTABILITY.md)."
 }
 
-# GitHub Copilot / VS Code: the agents are already in the native *.agent.md format, so we
-# COPY them (no conversion) into the Copilot config dir. Global install targets the
-# editor-agnostic user-level convention ~/.github/{agents,skills}; a project install writes
-# <path>/.github/{agents,skills}. Skills reuse the SKILL.md folder layout. VS Code users
-# whose profile lives elsewhere can point chat.agentFilesLocations / chat.agentSkillsLocations
-# at this folder (absolute path — VS Code does not expand ~).
+# GitHub Copilot CLI: the agents are already in the native *.agent.md format, so we COPY
+# them (no conversion) into the Copilot config dir. Per GitHub's docs the user-level
+# (global) location is the Copilot CLI personal dir ~/.copilot/{agents,skills} (overridable
+# with COPILOT_HOME); the project-level location is <path>/.github/{agents,skills}. Skills
+# use the SKILL.md folder layout in both cases.
 copy_copilot_agents() {
   local out_dir="$1"; mkdir -p "$out_dir"
   local count=0 src base dest
@@ -213,11 +212,17 @@ copy_copilot_agents() {
 }
 
 convert_copilot() {
-  copy_copilot_agents "$DEST/.github/agents"
-  install_skills "$DEST/.github/skills"
+  local base
+  if [[ "$SCOPE" == "global" ]]; then
+    base="${COPILOT_HOME:-$HOME/.copilot}"        # Copilot CLI personal dir: ~/.copilot/{agents,skills}
+  else
+    base="$DEST/.github"                          # project-level: <path>/.github/{agents,skills}
+  fi
+  copy_copilot_agents "$base/agents"
+  install_skills "$base/skills"
   echo "Done. Start a run by invoking the 'delivery-orchestrator' agent with the packet."
-  echo "Note (VS Code): if agents/skills aren't auto-detected, add this folder via"
-  echo "      chat.agentFilesLocations / chat.agentSkillsLocations (absolute path, no ~)."
+  echo "Note: global installs target the Copilot CLI personal dir (override with COPILOT_HOME)."
+  echo "      For a repo's project-level Copilot config, use --scope project --path <dir>."
   echo "See PORTABILITY.md for the agent-to-agent invocation caveat."
 }
 
