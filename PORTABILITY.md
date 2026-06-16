@@ -53,11 +53,12 @@ execute → Bash   |   todo → TodoWrite   |   agent → Task   |   web/fetch �
 
 ### Claude Code
 
-1. Run `scripts/install.sh --target claude`. It:
+1. Run `scripts/install.sh --target claude`. By default it installs **globally** to `~/.claude` (available in every project); add `--scope project --path <dir>` to install into one project's `.claude/` instead. It:
    - reads every `.github/agents/*.agent.md` (skipping the `test` scaffold),
-   - writes `.claude/agents/<name>.md` with the `tools:` line rewritten to Claude tool names and `argument-hint` dropped,
-   - ensures the skills exist under `.claude/skills/`.
-2. Copy `.claude/`, `process/`, `templates/`, and (when you start) `runs/` into your project.
+   - writes `agents/<name>.md` with the `tools:` line rewritten to Claude tool names and `argument-hint` dropped,
+   - ensures the skills exist under `skills/`,
+   - copies the `run-delivery` driver into `commands/`.
+2. For a **global** install nothing needs copying. For a **project** install, also copy `process/`, `templates/`, and (when you start) `runs/` into that project.
 3. Start a run with **`/run-delivery <run-id>`**. This is the key step: it makes your **main Claude session act as the Delivery Orchestrator**, because a Claude subagent cannot invoke other subagents — only the main loop can `Task`-dispatch the roster.
 4. Direct human use of any single agent still works via the agent picker / `Task`.
 
@@ -70,7 +71,7 @@ execute → Bash   |   todo → TodoWrite   |   agent → Task   |   web/fetch �
 
 ### Cursor
 
-1. Run `scripts/install.sh --target cursor`. It writes `.cursor/rules/<name>.mdc` — each agent body as a reference rule with `alwaysApply: false`, so you can `@`-mention the one you need.
+1. Run `scripts/install.sh --target cursor`. By default it installs **globally** to `~/.cursor/rules`; add `--scope project --path <dir>` for one project's `.cursor/rules/`. It writes `<name>.mdc` — each agent body as a reference rule with `alwaysApply: false`, so you can `@`-mention the one you need.
 2. Cursor has no native multi-agent orchestrator. Drive the run in the main chat: act as the orchestrator yourself (or paste the `delivery-orchestrator` rule), invoke each agent rule in playbook order, and write handoff files under `runs/<run-id>/` between steps.
 
 ### Generic / any agent harness

@@ -46,21 +46,26 @@ PORTABILITY.md       per-platform setup, directory map, tool-posture mapping
 
 ### 1. Install for your platform
 
+Installs **globally by default** (user-level config: `~/.claude`, `~/.cursor`) so the roster is available in every project. Use `--scope project --path <dir>` to install into a single project instead.
+
 ```bash
-# Claude Code — generates .claude/agents/ (tools frontmatter rewritten) + ensures .claude/skills/
+# Claude Code — global install -> ~/.claude/agents + ~/.claude/skills + ~/.claude/commands
 scripts/install.sh --target claude
 
-# Cursor — generates .cursor/rules/ reference rules
+# …or scope it to one project -> <dir>/.claude/
+scripts/install.sh --target claude --scope project --path /path/to/your/project
+
+# Cursor — global install -> ~/.cursor/rules  (add --scope project --path <dir> for one project)
 scripts/install.sh --target cursor
 
 # GitHub Copilot / VS Code — agents are already native in .github/agents/ (no conversion)
 scripts/install.sh --target copilot   # prints guidance only
 
-# Claude Code marketplace plugin — generates root agents/ skills/ commands/ (+ .claude-plugin/ manifests)
+# Claude Code marketplace plugin — regenerates this repo's root agents/ skills/ commands/ (+ .claude-plugin/ manifests)
 scripts/install.sh --target plugin
 ```
 
-Copy the relevant folders (`.claude/`, `.github/`, or `.cursor/`) plus `process/` and `templates/` into your project. See [PORTABILITY.md](PORTABILITY.md) for exactly which folders each platform needs.
+A global install needs nothing copied — every project picks up `~/.claude` (or `~/.cursor`) automatically. For a **project-scoped** install, also copy `process/` and `templates/` into that project. See [PORTABILITY.md](PORTABILITY.md) for exactly which folders each platform needs.
 
 ### 2. Create the packet
 
