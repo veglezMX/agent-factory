@@ -6,29 +6,60 @@
 # This script DERIVES the other platforms' layouts from it; never hand-edit the derived
 # folders (.claude/agents, .cursor/rules) — re-run this instead.
 #
+# Installs GLOBALLY by default (user-level config: ~/.claude, ~/.cursor). Pass
+# --scope project --path <dir> to install into a specific project instead.
+#
 # Usage:
-#   scripts/install.sh --target claude        # generate .claude/agents/*.md + ensure .claude/skills/
-#   scripts/install.sh --target cursor        # generate .cursor/rules/*.mdc
-#   scripts/install.sh --target copilot       # print guidance (agents already native)
-#   scripts/install.sh --target plugin        # generate root agents/ skills/ commands/ (Claude Code marketplace plugin)
-#   scripts/install.sh --target claude --dest /path/to/your/project
+#   scripts/install.sh --target claude                            # global  -> ~/.claude
+#   scripts/install.sh --target claude --scope project --path DIR # project -> DIR/.claude
+#   scripts/install.sh --target cursor                            # global  -> ~/.cursor/rules
+#   scripts/install.sh --target copilot                           # print guidance (agents already native)
+#   scripts/install.sh --target plugin                            # regenerate this repo's plugin dirs
+#
+# Flags:
+#   --target  claude | cursor | copilot | plugin   (default: claude)
+#   --scope   global | project                     (default: global)
+#   --path    DIR   project root (required when --scope project)
+#   --dest    DIR   alias for "--scope project --path DIR" (back-compat)
 #
 set -euo pipefail
 
 TARGET="claude"
+SCOPE=""
+DEST=""
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEST="$ROOT"
 
-usage() { sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --target) TARGET="${2:-}"; shift 2 ;;
-    --dest)   DEST="${2:-}";   shift 2 ;;
+    --scope)  SCOPE="${2:-}";  shift 2 ;;
+    --path)   DEST="${2:-}";   shift 2 ;;
+    --dest)   DEST="${2:-}"; SCOPE="${SCOPE:-project}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown argument: $1" >&2; usage; exit 1 ;;
   esac
 done
+
+# --- Resolve install scope -> DEST base directory ------------------------------
+# The conversion functions append the platform subdir (e.g. .claude/agents) to DEST:
+#   global  -> DEST=$HOME    => ~/.claude/agents, ~/.cursor/rules
+#   project -> DEST=<path>   => <path>/.claude/agents, <path>/.cursor/rules
+if [[ "$TARGET" == "plugin" ]]; then
+  # The plugin IS this repo (a single-plugin marketplace); its components must live at
+  # the repo root next to .claude-plugin/, so scope does not apply.
+  [[ "${SCOPE:-}" == "global" ]] && \
+    echo "note: --scope is ignored for --target plugin (components live at the repo root)." >&2
+  DEST="${DEST:-$ROOT}"
+else
+  [[ -n "$SCOPE" ]] || { [[ -n "$DEST" ]] && SCOPE="project" || SCOPE="global"; }
+  case "$SCOPE" in
+    global)  DEST="$HOME" ;;
+    project) [[ -n "$DEST" ]] || { echo "error: --scope project requires --path <dir>" >&2; usage; exit 1; } ;;
+    *)       echo "unknown scope: $SCOPE (use global | project)" >&2; usage; exit 1 ;;
+  esac
+fi
 
 AGENTS_SRC="$ROOT/.github/agents"
 SKILLS_SRC="$ROOT/.github/skills"
@@ -172,7 +203,7 @@ See PORTABILITY.md for the agent-to-agent invocation caveat.
 EOF
 }
 
-echo "agents-factory install — target: $TARGET, dest: $DEST"
+echo "agents-factory install — target: $TARGET, scope: ${SCOPE:-n/a}, dest: $DEST"
 case "$TARGET" in
   claude)  convert_claude ;;
   cursor)  convert_cursor ;;
