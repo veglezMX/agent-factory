@@ -1,6 +1,6 @@
 # Proposal: File-Per-Agent Advisory Pipeline
 
-**Status:** Draft for review (supersedes the in-memory draft)
+**Status:** Approved — decisions locked (see §9). Supersedes the in-memory draft.
 **Author:** generated for `contact@veglez.com`
 **Date:** 2026-06-16
 **Scope:** A second, lightweight way to run the roster for **advisory/review** work on an
@@ -211,19 +211,29 @@ is supplied by the orchestrator at dispatch time (§3), and direct invocation is
 
 ---
 
-## 9. Open questions for the reviewer
+## 9. Decisions (locked)
 
-1. **`<query-id>` generation** — orchestrator-derived slug, a timestamp, or user-supplied?
-   And should `agents-run/` be git-ignored by default (throwaway) or committed?
-2. **Re-running the same agent in one run** — if an agent must run twice (e.g. a re-review
-   after another agent's findings), `<agent-name>-output.md` collides. Add a sequence
-   prefix (`02-security-engineer-output.md`), or allow overwrite, or disallow re-runs in
-   v1?
-3. **Subject input** — does the orchestrator point agents at the real target repo (their
-   read-only tools read actual files), or only at a pasted description? Reading real files
-   is far more useful and is the natural fit for these read-only agents.
-4. **Driver scope** — Claude Code `commands/` only for v1, or author it as a portable
-   roster concept first (so Copilot/Cursor get it via the converter)?
-5. **Write-boundary enforcement** — is the orchestrator's prompt instruction ("write only
-   your one output file") enough, or do we want a harder guard so an advisory agent can't
-   accidentally write into the subject repo?
+1. **`<query-id>` generation & git status.** The orchestrator derives a short slug from the
+   user's request plus a short date (e.g. `auth-review-0616`), giving the folder
+   `agents-run/orchestrator-auth-review-0616/`. The user may override the slug. **`agents-run/`
+   is git-ignored by default** — advisory runs are throwaway; a user who wants to keep one
+   commits it deliberately.
+2. **Re-running the same agent.** The first run writes the clean `<agent-name>-output.md`
+   (matching the canonical structure in §2). A re-run of the same agent in the same folder
+   writes a numeric suffix — `<agent-name>-output-2.md`, `-3`, … — never overwriting the
+   prior finding. The orchestrator passes the **latest** suffix as input downstream and
+   notes the supersession in its progress.
+3. **Subject input — read the real repo.** The orchestrator points each agent at the actual
+   target codebase; the agents use their **read-only** tools (`Read`/`Grep`/`Glob`) on real
+   files. A pasted description is supported as a fallback when no repo is available. Findings
+   cite real `file:line` locations.
+4. **Driver scope.** v1 ships as a Claude Code driver — `commands/run-advisory.md` — authored
+   so its logic is portable (no Claude-only assumptions beyond the Task-dispatch loop), so a
+   later pass can surface it on Copilot/Cursor via the converter. Claude Code is the only
+   target wired up in v1.
+5. **Write-boundary enforcement.** v1 relies on the orchestrator's prompt instruction —
+   each dispatched agent is told its single permitted write target (its own `*-output.md`)
+   and that the subject repo is read-only. A harder guard (e.g. a pre-write hook scoping
+   writes to `agents-run/`) is noted as a future hardening, not required for v1.
+
+These are settled; implementation (§8) can proceed against them.
