@@ -58,8 +58,8 @@ scripts/install.sh --target claude --scope project --path /path/to/your/project
 # Cursor — global install -> ~/.cursor/rules  (add --scope project --path <dir> for one project)
 scripts/install.sh --target cursor
 
-# GitHub Copilot / VS Code — agents are already native in .github/agents/ (no conversion)
-scripts/install.sh --target copilot   # prints guidance only
+# GitHub Copilot / VS Code — copies native agents + skills -> ~/.github/ (no conversion)
+scripts/install.sh --target copilot   # add --scope project --path <dir> for one project
 
 # Claude Code marketplace plugin — regenerates this repo's root agents/ skills/ commands/ (+ .claude-plugin/ manifests)
 scripts/install.sh --target plugin

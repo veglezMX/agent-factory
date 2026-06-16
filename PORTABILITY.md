@@ -64,10 +64,11 @@ execute → Bash   |   todo → TodoWrite   |   agent → Task   |   web/fetch �
 
 ### GitHub Copilot / VS Code
 
-1. The agents are **already in the native format** at `.github/agents/*.agent.md` — copy the `.github/` folder into your repo. (Verify the agents path your VS Code / Copilot version expects; it has moved between releases. If yours uses a different location, move the files accordingly — only the location changes, not the content.)
-2. Skills: Copilot has no `SKILL.md` runtime. Turn `creating-stakeholder-packet` into a `.github/prompts/creating-stakeholder-packet.prompt.md`, or just open the `SKILL.md` and follow it manually before the first run.
-3. Start a run by invoking the **`delivery-orchestrator`** agent and pasting/pointing at the packet.
-4. **Caveat:** whether `delivery-orchestrator` can invoke the other agents depends on your Copilot version's agent-to-agent support. If it can't, drive the sequence yourself: invoke each agent in playbook order, pasting the prior handoff as input.
+1. Run `scripts/install.sh --target copilot`. The agents are **already in the native `*.agent.md` format**, so it copies (no conversion) the agents and skills into the user-level Copilot dir `~/.github/{agents,skills}` by default. Add `--scope project --path <dir>` to install into one project's `.github/` instead.
+2. **VS Code caveat:** VS Code's *own* user profile lives elsewhere (Linux `~/.config/Code/User/…`, macOS `~/Library/Application Support/Code/User/…`). If the agents/skills aren't auto-detected, point `chat.agentFilesLocations` / `chat.agentSkillsLocations` at the install folder using an **absolute** path (VS Code does not expand `~`). Visual Studio / Copilot use `~/.github/agents` by default, so no extra config there.
+3. Skills install as their `SKILL.md` folders (used via `chat.agentSkillsLocations`). If your Copilot build has no skills runtime, open `creating-stakeholder-packet/SKILL.md` and follow it manually before the first run.
+4. Start a run by invoking the **`delivery-orchestrator`** agent and pasting/pointing at the packet.
+5. **Caveat:** whether `delivery-orchestrator` can invoke the other agents depends on your Copilot version's agent-to-agent support. If it can't, drive the sequence yourself: invoke each agent in playbook order, pasting the prior handoff as input.
 
 ### Cursor
 
