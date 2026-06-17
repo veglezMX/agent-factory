@@ -14,11 +14,12 @@
 #   scripts/install.sh --target claude --scope project --path DIR # project -> DIR/.claude
 #   scripts/install.sh --target cursor                            # global  -> ~/.cursor/rules
 #   scripts/install.sh --target copilot                           # global  -> ~/.copilot (agents+skills)
-#   scripts/install.sh --target agents                            # global  -> ~/.agents (Roo Code custom-mode format)
+#   scripts/install.sh --target agents                            # global  -> ~/.agents (generic per-agent custom-mode files)
+#   scripts/install.sh --target roo                               # project -> <path>/.roomodes (native Roo Code single file)
 #   scripts/install.sh --target plugin                            # regenerate this repo's plugin dirs
 #
 # Flags:
-#   --target  claude | cursor | copilot | agents | plugin   (default: claude)
+#   --target  claude | cursor | copilot | agents | roo | plugin   (default: claude)
 #   --scope   global | project                     (default: global)
 #   --path    DIR   project root (required when --scope project)
 #   --dest    DIR   alias for "--scope project --path DIR" (back-compat)
@@ -325,8 +326,81 @@ convert_agents() {
   gen_agents_roo "$DEST/.agents"
   install_skills "$DEST/.agents/skills"
   echo "Done. Point your harness at $DEST/.agents (one custom-mode YAML per agent)."
-  echo "Note: Roo Code itself reads a single .roomodes (customModes: array); these per-agent"
-  echo "      files target generic .agents-style loaders. See PORTABILITY.md."
+  echo "Note: Roo Code itself reads a single .roomodes (customModes: array) — use '--target roo'"
+  echo "      for that native single-file layout. These per-agent files target generic"
+  echo "      .agents-style loaders. See PORTABILITY.md."
+}
+
+# --- Native Roo Code target (single .roomodes with a customModes: array) --------
+# Unlike the generic "agents" target (a folder of per-agent files), Roo Code itself
+# loads ONE file — the project-level .roomodes at the workspace root, or the global
+# custom_modes.yaml in its settings dir — holding a top-level customModes: array.
+# This target emits that single file directly, so no manual merge step is needed.
+
+# Emit one customModes entry (a YAML block-sequence item) for a source agent file.
+# Indentation contract: the "- slug:" item sits at 2 spaces, its keys at 4, and the
+# block-scalar bodies at 6 (a block scalar must out-indent its key). roleDefinition
+# is the body's "You are …" persona; whenToUse is the description; customInstructions
+# is the full body verbatim (its complete operating manual is preserved).
+emit_roomode_entry() {
+  local src="$1" base slug name desc role
+  base="$(basename "$src" .agent.md)"
+  slug="$(field_value "$src" name)"; [[ -n "$slug" ]] || slug="$base"
+  name="$(title_case "$slug")"
+  desc="$(field_value "$src" description)"
+  # persona paragraph: the "You are …" block, up to the next blank line
+  role="$(awk 'BEGIN{fm=0;cap=0}
+               /^---[[:space:]]*$/{fm++; next}
+               fm>=2{
+                 if(!cap){ if($0 ~ /^You are/) cap=1; else next }
+                 if($0 ~ /^[[:space:]]*$/) exit
+                 print $0
+               }' "$src")"
+  [[ -n "$role" ]] || role="$desc"             # fallback if no "You are" line
+  echo "  - slug: $slug"
+  echo "    name: $name"
+  echo "    roleDefinition: |-"
+  printf '%s\n' "$role" | sed 's/^./      &/'
+  if [[ -n "$desc" ]]; then
+    echo "    whenToUse: |-"
+    printf '      %s\n' "$desc"
+  fi
+  # groups inline (a flow sequence is valid YAML even when nested); reuse the posture map
+  printf '    %s\n' "$(roo_groups_line "$(grep -m1 '^tools:' "$src" || true)")"
+  echo "    customInstructions: |-"
+  # the full body, verbatim, from its first non-blank line, indented under the scalar
+  awk 'BEGIN{fm=0;started=0}
+       /^---[[:space:]]*$/{fm++; next}
+       fm>=2{
+         if(!started){ if($0 ~ /^[[:space:]]*$/) next; started=1 }
+         if($0 ~ /^[[:space:]]*$/) print ""; else print "      " $0
+       }' "$src"
+}
+
+# Convert .github/agents/*.agent.md into a single native Roo Code .roomodes file.
+gen_roomodes() {
+  local out_file="$1"; mkdir -p "$(dirname "$out_file")"
+  local count=0 src
+  echo "customModes:" > "$out_file"
+  for src in "$AGENTS_SRC"/*.agent.md; do
+    [[ -e "$src" ]] || continue
+    [[ "$(basename "$src" .agent.md)" == "test" ]] && continue   # skip the editor scaffold
+    emit_roomode_entry "$src" >> "$out_file"
+    count=$((count+1))
+  done
+  echo "  $count agents -> $out_file (native Roo Code customModes: array)"
+}
+
+convert_roo() {
+  gen_roomodes "$DEST/.roomodes"
+  install_skills "$DEST/.roo/skills"
+  echo "Done. Roo Code reads $DEST/.roomodes natively (top-level customModes: array)."
+  echo "Start a run by switching to the 'delivery-orchestrator' mode and pointing it at the packet."
+  if [[ "$SCOPE" == "global" ]]; then
+    echo "Note: global Roo modes live in Roo's settings dir as custom_modes.yaml, not ~/.roomodes."
+    echo "      Copy the generated customModes: array there, or prefer --scope project --path <dir>."
+  fi
+  echo "Skills have no native Roo runtime — installed under $DEST/.roo/skills for manual invoke. See PORTABILITY.md."
 }
 
 echo "agents-factory install — target: $TARGET, scope: ${SCOPE:-n/a}, dest: $DEST"
@@ -335,6 +409,7 @@ case "$TARGET" in
   cursor)  convert_cursor ;;
   copilot) convert_copilot ;;
   agents)  convert_agents ;;
+  roo)     convert_roo ;;
   plugin)  convert_plugin ;;
-  *) echo "unknown target: $TARGET (use claude | copilot | cursor | agents | plugin)" >&2; exit 1 ;;
+  *) echo "unknown target: $TARGET (use claude | copilot | cursor | agents | roo | plugin)" >&2; exit 1 ;;
 esac
