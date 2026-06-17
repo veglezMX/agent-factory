@@ -82,6 +82,16 @@ Use the `creating-stakeholder-packet` skill (it interviews you), or copy [`templ
 
 The run pauses at each **human gate** (scope, design, release, …) until you sign the gate record — an intentional checkpoint where a human reviews and approves before work continues.
 
+### Or: a review without a build — `/run-advisory`
+
+To analyze or review an existing codebase instead of building, run the lightweight advisory path — a chain of read-only/review agents, hand-offs recorded as files under `agents-run/`, no `runs/` workspace:
+
+```text
+/run-advisory "auth review" architecture-guardian, security-engineer, code-reviewer
+```
+
+Omit the agent list to let the orchestrator pick the chain. For one specialist with no hand-off, just invoke that agent directly (it writes nothing). Full guide: [advisory-pipeline-usage.md](process/advisory-pipeline-usage.md).
+
 ---
 
 ## Use as a Claude Code plugin (CLI & web)

@@ -28,6 +28,65 @@ Rule of thumb: **one specialist → single-agent run. A chain that hands off →
 
 ---
 
+## Triggering it
+
+### Prerequisite — install the roster for Claude Code
+
+The `/run-advisory` command ships with the roster. Install it (once) so the slash command
+is available, globally or scoped to a project:
+
+```bash
+# global -> ~/.claude/agents + ~/.claude/skills + ~/.claude/commands
+scripts/install.sh --target claude
+
+# …or scoped to one project -> <dir>/.claude/
+scripts/install.sh --target claude --scope project --path /path/to/your/project
+```
+
+This copies both drivers — `/run-delivery` (full build) and `/run-advisory` (advisory
+review). If you use the marketplace plugin instead, `scripts/install.sh --target plugin`
+regenerates the bundled `commands/`, and the plugin manifest auto-discovers `run-advisory`.
+
+### Orchestrator mode — `/run-advisory`
+
+```text
+/run-advisory "<topic>"  [agent, agent, …]
+```
+
+- **`<topic>`** (required) — a short description of the review; the orchestrator turns it
+  into the `<query-id>` for the run folder.
+- **agent list** (optional) — comma- or space-separated advisory agent names, in the order
+  you want them. Omit it and the orchestrator picks a sensible chain and order for you.
+
+Examples:
+
+```text
+# let the orchestrator choose the agents and order
+/run-advisory "review the auth module before release"
+
+# pin the chain and order explicitly
+/run-advisory "auth review" architecture-guardian, security-engineer, code-reviewer
+
+# a single specialist, but still recorded to a file (because the orchestrator ran it)
+/run-advisory "is this IaC least-privilege?" infrastructure-guardian
+```
+
+The session becomes the Advisory Orchestrator, runs the chain, writes one `*-output.md` per
+agent under `agents-run/orchestrator-<query-id>/`, and finishes with an acceptance prompt.
+
+### Single-agent run — just invoke the agent
+
+No command needed. Ask for the agent directly and point it at the code; it answers in your
+session and **writes nothing**:
+
+```text
+Use the security-engineer agent to review the changes in src/auth for token leakage.
+```
+
+(On other harnesses, invoke the agent by its native name per [PORTABILITY.md](../PORTABILITY.md).)
+
+---
+
 ## Single-agent run
 
 Use this when you want exactly one specialist's read on something and there is no "next
