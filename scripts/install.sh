@@ -15,7 +15,8 @@
 #   scripts/install.sh --target cursor                            # global  -> ~/.cursor/rules
 #   scripts/install.sh --target copilot                           # global  -> ~/.copilot (agents+skills)
 #   scripts/install.sh --target agents                            # global  -> ~/.agents (generic per-agent custom-mode files)
-#   scripts/install.sh --target roo                               # project -> <path>/.roomodes (native Roo Code single file)
+#   scripts/install.sh --target roo                               # global  -> Roo's custom_modes.yaml (editor globalStorage)
+#   scripts/install.sh --target roo --scope project --path DIR    # project -> DIR/.roomodes (native Roo Code single file)
 #   scripts/install.sh --target plugin                            # regenerate this repo's plugin dirs
 #
 # Flags:
@@ -391,15 +392,66 @@ gen_roomodes() {
   echo "  $count agents -> $out_file (native Roo Code customModes: array)"
 }
 
+# Candidate dirs that hold Roo's GLOBAL modes file (custom_modes.yaml). Roo stores
+# global modes inside the editor's VS Code globalStorage for the Roo extension
+# (id rooveterinaryinc.roo-cline) — NOT in $HOME. The exact path is OS- and
+# editor-specific, so we enumerate the known editor "User" dirs for this OS.
+# Override the whole search with ROO_SETTINGS_DIR=<dir> for unusual setups.
+roo_global_settings_dirs() {
+  if [[ -n "${ROO_SETTINGS_DIR:-}" ]]; then printf '%s\n' "$ROO_SETTINGS_DIR"; return; fi
+  local root e editors=("Code" "Code - Insiders" "VSCodium" "Cursor" "Windsurf")
+  case "$(uname -s)" in
+    Darwin) root="$HOME/Library/Application Support" ;;
+    Linux)  root="${XDG_CONFIG_HOME:-$HOME/.config}" ;;
+    *)      root="${APPDATA:-$HOME/.config}" ;;            # Windows (Git Bash / MSYS)
+  esac
+  for e in "${editors[@]}"; do
+    printf '%s\n' "$root/$e/User/globalStorage/rooveterinaryinc.roo-cline/settings"
+  done
+}
+
+# Write the roster into Roo's global custom_modes.yaml for every editor that has
+# the Roo extension installed (its globalStorage dir already exists). If none is
+# found, fail loudly with the candidate paths rather than silently writing a file
+# Roo will never read.
+install_roo_global() {
+  local wrote=0 dir ext_dir
+  while IFS= read -r dir; do
+    ext_dir="$(dirname "$dir")"                            # .../rooveterinaryinc.roo-cline
+    # ROO_SETTINGS_DIR is taken verbatim; otherwise require the extension's storage to exist.
+    if [[ -n "${ROO_SETTINGS_DIR:-}" || -d "$ext_dir" ]]; then
+      gen_roomodes "$dir/custom_modes.yaml"
+      wrote=$((wrote+1))
+    fi
+  done < <(roo_global_settings_dirs)
+
+  if [[ $wrote -eq 0 ]]; then
+    {
+      echo "error: could not find Roo Code's global storage for any known editor."
+      echo "Roo's global modes file is custom_modes.yaml under the editor's globalStorage:"
+      roo_global_settings_dirs | sed 's/^/  /'
+      echo "Fixes: (1) open Roo in your editor at least once so that dir exists, then re-run;"
+      echo "       (2) set ROO_SETTINGS_DIR=<that settings dir> and re-run; or"
+      echo "       (3) use --scope project --path <dir> to write a workspace .roomodes instead."
+    } >&2
+    exit 1
+  fi
+
+  install_skills "$HOME/.roo/skills"                        # no native Roo skills runtime; staged for manual use
+  echo "Done. Reload your editor window — the modes appear globally in Roo Code."
+  echo "Switch to the 'delivery-orchestrator' mode to start a run."
+  echo "Skills have no native Roo runtime — staged under ~/.roo/skills for manual invoke. See PORTABILITY.md."
+}
+
 convert_roo() {
+  if [[ "$SCOPE" == "global" ]]; then
+    install_roo_global
+    return
+  fi
   gen_roomodes "$DEST/.roomodes"
   install_skills "$DEST/.roo/skills"
   echo "Done. Roo Code reads $DEST/.roomodes natively (top-level customModes: array)."
   echo "Start a run by switching to the 'delivery-orchestrator' mode and pointing it at the packet."
-  if [[ "$SCOPE" == "global" ]]; then
-    echo "Note: global Roo modes live in Roo's settings dir as custom_modes.yaml, not ~/.roomodes."
-    echo "      Copy the generated customModes: array there, or prefer --scope project --path <dir>."
-  fi
   echo "Skills have no native Roo runtime — installed under $DEST/.roo/skills for manual invoke. See PORTABILITY.md."
 }
 
