@@ -109,8 +109,8 @@ the difference is entirely in whether an output-path instruction is present in i
 Unchanged from the prior discussion, and it fits this model naturally. In scope are the
 read-only / review-mode agents whose output is *findings*, not product code:
 
-- **Read-only reviewers:** `06 bundle-intake-validator`, `08 architecture-guardian`,
-  `18 code-reviewer`, `22 infrastructure-guardian`, plus `07 product-planner`.
+- **Read-only reviewers:** `08 architecture-guardian`, `18 code-reviewer`,
+  `22 infrastructure-guardian`.
 - **Analyst:** `02 requirements-analyst` (analysis mode, fed the subject repo/description
   rather than a frozen packet).
 - **Review-mode cross-cutting:** `15 security-engineer`, `26 privacy-compliance-officer`,
@@ -119,16 +119,27 @@ read-only / review-mode agents whose output is *findings*, not product code:
 The implementer agents stay out of scope: their artifacts are the product itself, which is
 a different machinery (`run-delivery` / `runs/`).
 
+**Also excluded — delivery-coupled agents.** An earlier draft listed `06 bundle-intake-validator`
+and `07 product-planner` here. The 9-agent self-test (see §11) showed both are useless in a
+standalone advisory run: their only valid inputs (a compiled task bundle; a requirements
+document + validated bundle) exist solely inside a delivery `runs/<id>/` workspace. `06`
+correctly returned `blocked`; `07` reported it had no source to plan from. Both are removed
+from advisory scope and remain delivery-only.
+
 **Who writes the output file depends on the agent's posture** — and this matters because
 the read-only reviewers have *no write tool at all*, by design (their containment guarantee
 in delivery runs depends on it). We do **not** weaken that posture for advisory use. Instead:
 
-- **Write-capable agents** (`requirements-analyst`, `security-engineer`,
-  `privacy-compliance-officer`, `accessibility-auditor` — posture includes `edit`) write
-  their own `*-output.md` to the run folder and return a one-line confirmation. Their single
-  permitted write target is that one file; the subject repo stays read-only.
-- **Read-only agents** (`architecture-guardian`, `code-reviewer`, `infrastructure-guardian`,
-  `bundle-intake-validator`, `product-planner` — no `edit`) cannot write, so they **return
+- **On-request-writer agents** (`requirements-analyst` — roster `R` (+docs); and
+  `security-engineer` / `privacy-compliance-officer` / `accessibility-auditor` — roster `R`,
+  `E` on request) are **read-only by default**. The orchestrator's dispatch *explicitly
+  tasks* them to author exactly one file — their `*-output.md` — which is precisely the
+  "edit on request" / docs grant the roster already allows. They write that one file and
+  return a one-line confirmation; the subject repo stays read-only. No default posture is
+  widened. (If a harness enforces default `R` and blocks the write, the orchestrator falls
+  back to the read-only handling below.)
+- **Read-only agents** (`architecture-guardian`, `code-reviewer`, `infrastructure-guardian`
+  — no `edit`) cannot write, so they **return
   the findings document as their final message and the orchestrator writes it** to the output
   path. On Claude Code only an agent's final message returns (not its working transcript), so
   this is bounded; the orchestrator still carries only *paths* forward to the next agent.
@@ -252,3 +263,28 @@ mini-playbooks for common chains, and a pre-write hook to hard-scope writes to `
    writes to `agents-run/`) is noted as a future hardening, not required for v1.
 
 These are settled; implementation (§8) can proceed against them.
+
+---
+
+## 10. Known limitations
+
+- **No content minimization in output files.** Agents are told to cite real `file:line`
+  evidence, but nothing constrains *what* they transcribe into a `*-output.md`. A secret or
+  personal datum encountered as evidence can be quoted verbatim, and `agents-run/` persists
+  on local disk even though it is git-ignored. Accepted for v1 (surfaced by the
+  privacy-compliance-officer in the §11 self-test); revisit with a redaction instruction if
+  advisory runs are pointed at secret- or PII-heavy repos.
+- **Write boundary is prompt-only** (decision §9.5) — not a mechanical guard.
+- **No durability / replay** beyond the output files themselves; a dropped session loses the
+  orchestrator's in-flight progress (the written files survive).
+
+## 11. Self-test results
+
+All nine in-scope advisory agents were dispatched against this repository under the real
+dispatch contract. Outcome: **the mechanism works for all nine** — write-capable agents wrote
+their own `*-output.md` and returned a one-line confirmation; read-only agents returned their
+findings for the orchestrator to persist; every file was well-formed in the §6 format; and
+`agents-run/` stayed git-ignored. The test also surfaced the two design corrections now
+folded in above: it proved `06 bundle-intake-validator` and `07 product-planner` are
+delivery-coupled and useless in a standalone run (removed from §4 scope), and the
+privacy-compliance-officer flagged the content-minimization gap now recorded in §10.
