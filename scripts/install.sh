@@ -401,21 +401,37 @@ gen_roomodes() {
 # custom_modes.yaml, the customModes: array); only the extension id differs:
 #   zoocodeorganization.zoo-code  (Zoo Code — current)
 #   rooveterinaryinc.roo-cline    (Roo Code — legacy)
-# The path is OS- and editor-specific, so we enumerate the known editor "User" dirs
-# crossed with both extension ids. Override the search with ROO_SETTINGS_DIR=<dir>.
+# The "User" dir location depends on the install: a DESKTOP editor uses an OS config
+# root (<root>/<Editor>/User), while a REMOTE/SERVER editor (SSH, WSL, devcontainer,
+# Codespaces, code-server) uses ~/.<editor>-server/data/User. We enumerate both,
+# crossed with the two extension ids. Override the search with ROO_SETTINGS_DIR=<dir>.
 roo_global_settings_dirs() {
   if [[ -n "${ROO_SETTINGS_DIR:-}" ]]; then printf '%s\n' "$ROO_SETTINGS_DIR"; return; fi
-  local root e ext
-  local editors=("Code" "Code - Insiders" "VSCodium" "Cursor" "Windsurf")
+  local root e ext userdir
   local exts=("zoocodeorganization.zoo-code" "rooveterinaryinc.roo-cline")
+  local userdirs=()
+
+  # Desktop editors: <os-config-root>/<Editor>/User
+  local editors=("Code" "Code - Insiders" "VSCodium" "Cursor" "Windsurf")
   case "$(uname -s)" in
     Darwin) root="$HOME/Library/Application Support" ;;
     Linux)  root="${XDG_CONFIG_HOME:-$HOME/.config}" ;;
     *)      root="${APPDATA:-$HOME/.config}" ;;            # Windows (Git Bash / MSYS)
   esac
   for e in "${editors[@]}"; do
+    userdirs+=("$root/$e/User")
+  done
+
+  # Remote / server editors (VS Code Server over SSH/WSL/devcontainers/Codespaces):
+  # ~/.<editor>-server/data/User — plus code-server's own layout.
+  for e in .vscode-server .vscode-server-insiders .cursor-server .windsurf-server .vscodium-server; do
+    userdirs+=("$HOME/$e/data/User")
+  done
+  userdirs+=("$HOME/.local/share/code-server/User")
+
+  for userdir in "${userdirs[@]}"; do
     for ext in "${exts[@]}"; do
-      printf '%s\n' "$root/$e/User/globalStorage/$ext/settings"
+      printf '%s\n' "$userdir/globalStorage/$ext/settings"
     done
   done
 }
