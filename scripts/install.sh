@@ -15,12 +15,14 @@
 #   scripts/install.sh --target cursor                            # global  -> ~/.cursor/rules
 #   scripts/install.sh --target copilot                           # global  -> ~/.copilot (agents+skills)
 #   scripts/install.sh --target agents                            # global  -> ~/.agents (generic per-agent custom-mode files)
-#   scripts/install.sh --target roo                               # global  -> Roo's custom_modes.yaml (editor globalStorage)
-#   scripts/install.sh --target roo --scope project --path DIR    # project -> DIR/.roomodes (native Roo Code single file)
+#   scripts/install.sh --target roo                               # global  -> Zoo/Roo custom_modes.yaml (editor globalStorage)
+#   scripts/install.sh --target roo --scope project --path DIR    # project -> DIR/.roomodes (native single-file format)
 #   scripts/install.sh --target plugin                            # regenerate this repo's plugin dirs
 #
 # Flags:
-#   --target  claude | cursor | copilot | agents | roo | plugin   (default: claude)
+#   --target  claude | cursor | copilot | agents | roo | zoo | plugin   (default: claude)
+#             ('roo' and 'zoo' are aliases — same .roomodes / custom_modes.yaml format;
+#              global installs auto-detect Zoo Code and legacy Roo Code storage)
 #   --scope   global | project                     (default: global)
 #   --path    DIR   project root (required when --scope project)
 #   --dest    DIR   alias for "--scope project --path DIR" (back-compat)
@@ -392,32 +394,40 @@ gen_roomodes() {
   echo "  $count agents -> $out_file (native Roo Code customModes: array)"
 }
 
-# Candidate dirs that hold Roo's GLOBAL modes file (custom_modes.yaml). Roo stores
-# global modes inside the editor's VS Code globalStorage for the Roo extension
-# (id rooveterinaryinc.roo-cline) — NOT in $HOME. The exact path is OS- and
-# editor-specific, so we enumerate the known editor "User" dirs for this OS.
-# Override the whole search with ROO_SETTINGS_DIR=<dir> for unusual setups.
+# Candidate dirs that hold the GLOBAL modes file (custom_modes.yaml). Roo Code and
+# its active successor Zoo Code (the community fork; Roo was archived in 2026) both
+# store global modes inside the editor's VS Code globalStorage for the extension —
+# NOT in $HOME. Zoo Code keeps the same format and filenames (.roomodes,
+# custom_modes.yaml, the customModes: array); only the extension id differs:
+#   zoocodeorganization.zoo-code  (Zoo Code — current)
+#   rooveterinaryinc.roo-cline    (Roo Code — legacy)
+# The path is OS- and editor-specific, so we enumerate the known editor "User" dirs
+# crossed with both extension ids. Override the search with ROO_SETTINGS_DIR=<dir>.
 roo_global_settings_dirs() {
   if [[ -n "${ROO_SETTINGS_DIR:-}" ]]; then printf '%s\n' "$ROO_SETTINGS_DIR"; return; fi
-  local root e editors=("Code" "Code - Insiders" "VSCodium" "Cursor" "Windsurf")
+  local root e ext
+  local editors=("Code" "Code - Insiders" "VSCodium" "Cursor" "Windsurf")
+  local exts=("zoocodeorganization.zoo-code" "rooveterinaryinc.roo-cline")
   case "$(uname -s)" in
     Darwin) root="$HOME/Library/Application Support" ;;
     Linux)  root="${XDG_CONFIG_HOME:-$HOME/.config}" ;;
     *)      root="${APPDATA:-$HOME/.config}" ;;            # Windows (Git Bash / MSYS)
   esac
   for e in "${editors[@]}"; do
-    printf '%s\n' "$root/$e/User/globalStorage/rooveterinaryinc.roo-cline/settings"
+    for ext in "${exts[@]}"; do
+      printf '%s\n' "$root/$e/User/globalStorage/$ext/settings"
+    done
   done
 }
 
-# Write the roster into Roo's global custom_modes.yaml for every editor that has
-# the Roo extension installed (its globalStorage dir already exists). If none is
-# found, fail loudly with the candidate paths rather than silently writing a file
-# Roo will never read.
+# Write the roster into the global custom_modes.yaml for every editor that has Zoo
+# Code (or legacy Roo Code) installed — i.e. whose globalStorage dir already exists.
+# If none is found, fail loudly with the candidate paths rather than silently
+# writing a file the extension will never read.
 install_roo_global() {
   local wrote=0 dir ext_dir
   while IFS= read -r dir; do
-    ext_dir="$(dirname "$dir")"                            # .../rooveterinaryinc.roo-cline
+    ext_dir="$(dirname "$dir")"                            # .../<extension-id>
     # ROO_SETTINGS_DIR is taken verbatim; otherwise require the extension's storage to exist.
     if [[ -n "${ROO_SETTINGS_DIR:-}" || -d "$ext_dir" ]]; then
       gen_roomodes "$dir/custom_modes.yaml"
@@ -427,18 +437,18 @@ install_roo_global() {
 
   if [[ $wrote -eq 0 ]]; then
     {
-      echo "error: could not find Roo Code's global storage for any known editor."
-      echo "Roo's global modes file is custom_modes.yaml under the editor's globalStorage:"
+      echo "error: could not find Zoo Code / Roo Code global storage for any known editor."
+      echo "The global modes file is custom_modes.yaml under the editor's globalStorage:"
       roo_global_settings_dirs | sed 's/^/  /'
-      echo "Fixes: (1) open Roo in your editor at least once so that dir exists, then re-run;"
+      echo "Fixes: (1) open Zoo Code in your editor at least once so that dir exists, then re-run;"
       echo "       (2) set ROO_SETTINGS_DIR=<that settings dir> and re-run; or"
       echo "       (3) use --scope project --path <dir> to write a workspace .roomodes instead."
     } >&2
     exit 1
   fi
 
-  install_skills "$HOME/.roo/skills"                        # no native Roo skills runtime; staged for manual use
-  echo "Done. Reload your editor window — the modes appear globally in Roo Code."
+  install_skills "$HOME/.roo/skills"                        # no native skills runtime; staged for manual use
+  echo "Done. Reload your editor window — the modes appear globally in Zoo Code / Roo Code."
   echo "Switch to the 'delivery-orchestrator' mode to start a run."
   echo "Skills have no native Roo runtime — staged under ~/.roo/skills for manual invoke. See PORTABILITY.md."
 }
@@ -461,7 +471,7 @@ case "$TARGET" in
   cursor)  convert_cursor ;;
   copilot) convert_copilot ;;
   agents)  convert_agents ;;
-  roo)     convert_roo ;;
+  roo|zoo) convert_roo ;;
   plugin)  convert_plugin ;;
-  *) echo "unknown target: $TARGET (use claude | copilot | cursor | agents | roo | plugin)" >&2; exit 1 ;;
+  *) echo "unknown target: $TARGET (use claude | copilot | cursor | agents | roo | zoo | plugin)" >&2; exit 1 ;;
 esac
