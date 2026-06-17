@@ -13,15 +13,15 @@ This framework is authored once and run on several AI coding platforms. This doc
 | **Agent directory + filename** | ❌ Platform-specific | `.github/agents/*.agent.md` (Copilot) vs `.claude/agents/*.md` (Claude) vs `.cursor/rules/*.mdc` (Cursor). |
 | **Orchestration** (01 invoking others) | ❌ Platform-specific | Depends on whether your harness lets one agent call another, or only the main loop dispatches. |
 
-**Bottom line:** the *thinking* is fully portable; the *wiring* is not. `scripts/install.sh` handles the wiring for Claude Code, Cursor, Roo Code (native `.roomodes`), and the generic `.agents` format; Copilot is already native.
+**Bottom line:** the *thinking* is fully portable; the *wiring* is not. `scripts/install.sh` handles the wiring for Claude Code, Cursor, Zoo Code / Roo Code (native `.roomodes`), and the generic `.agents` format; Copilot is already native.
 
 ---
 
 ## Directory mapping
 
-| Artifact | Claude Code | GitHub Copilot / VS Code | Cursor | Roo Code (native) | Generic `.agents` |
+| Artifact | Claude Code | GitHub Copilot / VS Code | Cursor | Zoo Code / Roo Code (native) | Generic `.agents` |
 |---|---|---|---|---|---|
-| Agents | `.claude/agents/*.md` *(generated)* | `.github/agents/*.agent.md` *(source of truth)* | `.cursor/rules/*.mdc` *(reference)* | `.roomodes` *(generated, single `customModes:` file)* | `.agents/*.yaml` *(generated, one file per agent)* |
+| Agents | `.claude/agents/*.md` *(generated)* | `.github/agents/*.agent.md` *(source of truth)* | `.cursor/rules/*.mdc` *(reference)* | `.roomodes` or global `custom_modes.yaml` *(generated, single `customModes:` file)* | `.agents/*.yaml` *(generated, one file per agent)* |
 | Skills | `.claude/skills/<name>/SKILL.md` | `.github/prompts/*.prompt.md` or manual | manual prompt | `.roo/skills/<name>/SKILL.md` *(manual invoke)* | `.agents/skills/<name>/SKILL.md` |
 | Orchestrator start | `/run-delivery <run-id>` (main loop) | invoke `delivery-orchestrator` agent | drive in main chat | switch to the `delivery-orchestrator` mode | switch to the `delivery-orchestrator` mode |
 | Run state | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` |
@@ -77,12 +77,16 @@ Roo Code:     read/search → read   |   edit → edit   |   execute → command
 1. Run `scripts/install.sh --target cursor`. By default it installs **globally** to `~/.cursor/rules`; add `--scope project --path <dir>` for one project's `.cursor/rules/`. It writes `<name>.mdc` — each agent body as a reference rule with `alwaysApply: false`, so you can `@`-mention the one you need.
 2. Cursor has no native multi-agent orchestrator. Drive the run in the main chat: act as the orchestrator yourself (or paste the `delivery-orchestrator` rule), invoke each agent rule in playbook order, and write handoff files under `runs/<run-id>/` between steps.
 
-### Roo Code (native `.roomodes`)
+### Zoo Code / Roo Code (native `.roomodes`)
 
-Roo Code natively reads a **single `.roomodes`** file at the workspace root with a top-level `customModes:` array. This target emits exactly that file — no manual merge step.
+> **Note on names.** Roo Code was archived in 2026; its active community successor is **Zoo Code** (`ZooCodeOrganization.zoo-code`). Zoo Code keeps the same format and filenames — `.roomodes`, `custom_modes.yaml`, the `customModes:` array — so this one target covers both. `--target roo` and `--target zoo` are aliases.
 
-1. Run `scripts/install.sh --target roo --scope project --path <dir>`. It writes `<dir>/.roomodes` with one `customModes:` entry per agent, each a custom-mode object: `slug`, `name`, `roleDefinition` (the agent's `You are …` persona), `whenToUse` (the agent's description), `groups` (the posture mapped to Roo's `read`/`edit`/`command`/`browser`), and `customInstructions` (the full agent body verbatim). Skills install as their `SKILL.md` folders under `<dir>/.roo/skills/` — Roo has no native skills runtime, so invoke them manually (open `creating-stakeholder-packet/SKILL.md` and follow it before the first run).
-2. **Global vs project:** `.roomodes` is a **project/workspace** file, so `--scope project --path <dir>` is the primary path. With `--scope global` the script writes `~/.roomodes` for convenience, but Roo's true global modes live in its settings dir as `custom_modes.yaml` — copy the generated `customModes:` array there if you want the roster in every workspace.
+These extensions natively read a **single `.roomodes`** file at the workspace root with a top-level `customModes:` array. This target emits exactly that file — no manual merge step.
+
+1. Run `scripts/install.sh --target roo --scope project --path <dir>`. It writes `<dir>/.roomodes` with one `customModes:` entry per agent, each a custom-mode object: `slug`, `name`, `roleDefinition` (the agent's `You are …` persona), `whenToUse` (the agent's description), `groups` (the posture mapped to the `read`/`edit`/`command`/`browser` groups), and `customInstructions` (the full agent body verbatim). Skills install as their `SKILL.md` folders under `<dir>/.roo/skills/` — there is no native skills runtime, so invoke them manually (open `creating-stakeholder-packet/SKILL.md` and follow it before the first run).
+2. **Global vs project:**
+   - **Project** (`--scope project --path <dir>`) writes `<dir>/.roomodes` at the workspace root — read natively.
+   - **Global** (`--scope global`, the default) writes the real global modes file, `custom_modes.yaml`, inside the editor's VS Code globalStorage for the extension (`…/globalStorage/zoocodeorganization.zoo-code/settings/`, or legacy `…/rooveterinaryinc.roo-cline/settings/`) — **not** `~/.roomodes`. The script auto-detects that dir across both extension ids and both install layouts: **desktop** editors (VS Code, Insiders, VSCodium, Cursor, Windsurf) and **remote/server** ones (`~/.vscode-server/data/User/...` over SSH, WSL, devcontainers, Codespaces, or code-server). It writes to every editor that has the extension installed. If none is found it fails with the candidate paths; open Zoo Code once so the dir exists, set `ROO_SETTINGS_DIR=<that settings dir>` to point at it explicitly, or fall back to a project install. Reload the editor window after installing.
 3. Start a run by switching to the **`delivery-orchestrator`** mode (slug `delivery-orchestrator`) and pointing it at the packet. The same agent-to-agent caveat as Copilot applies: if your harness can't let one mode invoke another, drive the sequence yourself in playbook order, writing handoff files under `runs/<run-id>/`.
 
 ### Generic `.agents` harness

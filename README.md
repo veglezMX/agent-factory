@@ -61,8 +61,9 @@ scripts/install.sh --target cursor
 # GitHub Copilot CLI — copies native agents + skills -> ~/.copilot/ (no conversion)
 scripts/install.sh --target copilot   # add --scope project --path <dir> for a repo's .github/
 
-# Roo Code — native single .roomodes (customModes: array) -> <dir>/.roomodes
-scripts/install.sh --target roo --scope project --path /path/to/your/project
+# Zoo Code / Roo Code — native single .roomodes (customModes: array). 'roo' and 'zoo' are aliases.
+scripts/install.sh --target roo --scope project --path /path/to/your/project   # -> <dir>/.roomodes (recommended)
+scripts/install.sh --target roo   # global -> custom_modes.yaml in the editor's globalStorage (Zoo/Roo, auto-detected)
 
 # Generic ".agents" harness — one custom-mode YAML per agent -> ~/.agents/
 scripts/install.sh --target agents    # add --scope project --path <dir> for one project
