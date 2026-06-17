@@ -123,10 +123,14 @@ a different machinery (`run-delivery` / `runs/`).
 the read-only reviewers have *no write tool at all*, by design (their containment guarantee
 in delivery runs depends on it). We do **not** weaken that posture for advisory use. Instead:
 
-- **Write-capable agents** (`requirements-analyst`, `security-engineer`,
-  `privacy-compliance-officer`, `accessibility-auditor` — posture includes `edit`) write
-  their own `*-output.md` to the run folder and return a one-line confirmation. Their single
-  permitted write target is that one file; the subject repo stays read-only.
+- **On-request-writer agents** (`requirements-analyst` — roster `R` (+docs); and
+  `security-engineer` / `privacy-compliance-officer` / `accessibility-auditor` — roster `R`,
+  `E` on request) are **read-only by default**. The orchestrator's dispatch *explicitly
+  tasks* them to author exactly one file — their `*-output.md` — which is precisely the
+  "edit on request" / docs grant the roster already allows. They write that one file and
+  return a one-line confirmation; the subject repo stays read-only. No default posture is
+  widened. (If a harness enforces default `R` and blocks the write, the orchestrator falls
+  back to the read-only handling below.)
 - **Read-only agents** (`architecture-guardian`, `code-reviewer`, `infrastructure-guardian`,
   `bundle-intake-validator`, `product-planner` — no `edit`) cannot write, so they **return
   the findings document as their final message and the orchestrator writes it** to the output

@@ -30,17 +30,24 @@ software use `/run-delivery` (the `runs/` machinery). Design and rationale:
 Dispatch **only** these. Refuse to run any implementer agent — their job is to write
 product code, which this pipeline never does.
 
-| Agent | Posture | Writes its own output file? |
+| Agent | Roster posture | Writes its own output file? |
 |---|---|---|
-| `requirements-analyst` (analysis mode) | edit | **Yes** |
-| `security-engineer` (review mode) | edit | **Yes** |
-| `privacy-compliance-officer` (review mode) | edit | **Yes** |
-| `accessibility-auditor` (review mode) | edit | **Yes** |
-| `architecture-guardian` | read-only | No — **you** write it |
-| `code-reviewer` | read-only | No — **you** write it |
-| `infrastructure-guardian` | read-only | No — **you** write it |
-| `bundle-intake-validator` | read-only | No — **you** write it |
-| `product-planner` | read-only | No — **you** write it |
+| `requirements-analyst` (analysis mode) | `R` (+docs) | **Yes** — via its docs-write grant |
+| `security-engineer` (review mode) | `R`, `E` on request | **Yes** — on-request edit grant (see below) |
+| `privacy-compliance-officer` (review mode) | `R`, `E` on request | **Yes** — on-request edit grant (see below) |
+| `accessibility-auditor` (review mode) | `R`, `E` on request | **Yes** — on-request edit grant (see below) |
+| `architecture-guardian` | `R` | No — **you** write it |
+| `code-reviewer` | `R` | No — **you** write it |
+| `infrastructure-guardian` | `R` | No — **you** write it |
+| `bundle-intake-validator` | `R` | No — **you** write it |
+| `product-planner` | `R` | No — **you** write it |
+
+These agents are **read-only by default** (`process/agent-roster.md`). The four in the top
+group can write **only because you explicitly task them to** — that is their roster `E on
+request` / docs grant, exercised here for the single purpose of writing their own
+`*-output.md`. Your dispatch must say so (see the per-step write rule). Every other agent
+stays strictly read-only and you write its file. No agent's default posture is widened, and
+none may write into the subject repo.
 
 If a named agent is not in this table, stop and tell the user it is out of scope for
 advisory runs.
@@ -49,7 +56,10 @@ advisory runs.
 
 1. Parse the topic and any agent list from `$ARGUMENTS`.
 2. Derive a short **`<query-id>`** slug from the topic plus today's date, e.g.
-   `auth-review-0616`. Accept a user-supplied slug if given.
+   `auth-review-0616`. **Sanitize it before using it in any path:** lower-case, allow only
+   `[a-z0-9-]`, collapse/trim separators, and reject anything containing `/`, `..`, or path
+   separators. `$ARGUMENTS` is untrusted free text — never let it steer a write outside
+   `agents-run/`. Accept a user-supplied slug only after the same sanitization.
 3. Create the run folder once: `agents-run/orchestrator-<query-id>/`. (It is git-ignored by
    default — see the repo `.gitignore`.) If it already exists, read its current
    `*-output.md` files to resume rather than restart.
@@ -84,11 +94,14 @@ For each agent in the chain, in order:
    - the write rule below.
 
 3. **Capture the output — two cases by posture:**
-   - **Write-capable agent** (`requirements-analyst`, `security-engineer`,
-     `privacy-compliance-officer`, `accessibility-auditor`): instruct it to **write its
-     findings document to the output path itself** and return only a one-line confirmation
-     (`done: wrote <path>`). Its single permitted write target is that one file; the subject
-     repo stays read-only. After it returns, confirm the file exists.
+   - **On-request-writer agent** (`requirements-analyst`, `security-engineer`,
+     `privacy-compliance-officer`, `accessibility-auditor`): these are read-only by default,
+     so your dispatch must **explicitly grant the one-file write task** — e.g. "You are
+     tasked to author exactly one file: write your findings to `<output path>` and nothing
+     else; the subject repo is read-only." They then write that file and return only a
+     one-line confirmation (`done: wrote <path>`). After it returns, confirm the file exists.
+     If a harness still blocks the write (enforcing default `R`), fall back to the read-only
+     handling below.
    - **Read-only agent** (`architecture-guardian`, `code-reviewer`, `infrastructure-guardian`,
      `bundle-intake-validator`, `product-planner`): it has no write tool, so instruct it to
      **return the complete findings document as its final message**, and then **you** write
