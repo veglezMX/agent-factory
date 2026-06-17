@@ -39,8 +39,6 @@ product code, which this pipeline never does.
 | `architecture-guardian` | `R` | No — **you** write it |
 | `code-reviewer` | `R` | No — **you** write it |
 | `infrastructure-guardian` | `R` | No — **you** write it |
-| `bundle-intake-validator` | `R` | No — **you** write it |
-| `product-planner` | `R` | No — **you** write it |
 
 These agents are **read-only by default** (`process/agent-roster.md`). The four in the top
 group can write **only because you explicitly task them to** — that is their roster `E on
@@ -48,6 +46,11 @@ request` / docs grant, exercised here for the single purpose of writing their ow
 `*-output.md`. Your dispatch must say so (see the per-step write rule). Every other agent
 stays strictly read-only and you write its file. No agent's default posture is widened, and
 none may write into the subject repo.
+
+**Excluded on purpose:** `bundle-intake-validator` (06) and `product-planner` (07) are
+delivery-pipeline-coupled — their only valid inputs (a compiled task bundle, a requirements
+document) exist solely inside a delivery `runs/<id>/` workspace, not in a standalone review.
+Do not dispatch them here; if asked, point the user to `/run-delivery`.
 
 If a named agent is not in this table, stop and tell the user it is out of scope for
 advisory runs.
@@ -102,10 +105,10 @@ For each agent in the chain, in order:
      one-line confirmation (`done: wrote <path>`). After it returns, confirm the file exists.
      If a harness still blocks the write (enforcing default `R`), fall back to the read-only
      handling below.
-   - **Read-only agent** (`architecture-guardian`, `code-reviewer`, `infrastructure-guardian`,
-     `bundle-intake-validator`, `product-planner`): it has no write tool, so instruct it to
-     **return the complete findings document as its final message**, and then **you** write
-     that document verbatim to the output path with `Write`.
+   - **Read-only agent** (`architecture-guardian`, `code-reviewer`, `infrastructure-guardian`):
+     it has no write tool, so instruct it to **return the complete findings document as its
+     final message**, and then **you** write that document verbatim to the output path with
+     `Write`.
 
    Either way, the findings live in the file; you carry only the **path** forward.
 
