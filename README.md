@@ -28,7 +28,7 @@ A run is driven by the **Delivery Orchestrator** (agent 01): it picks the next a
 .github/skills/      skills in Copilot/manual form
 .claude/skills/      the same skills, Claude Code layout
 .claude/agents/      Claude Code agents — GENERATED from .github/agents by scripts/install.sh
-.claude/commands/    run-delivery — the orchestrator driver for Claude Code
+.claude/commands/    run-delivery (full build) + run-advisory (review-only chain) — orchestrator drivers for Claude Code
 .claude-plugin/      plugin.json + marketplace.json — the Claude Code marketplace plugin
 agents/ skills/ commands/   plugin component dirs (Claude Code format) — GENERATED from .github
 process/             the spine: agent-roster.md, agent-handoff-protocol.md, playbooks/
@@ -82,6 +82,16 @@ Use the `creating-stakeholder-packet` skill (it interviews you), or copy [`templ
 
 The run pauses at each **human gate** (scope, design, release, …) until you sign the gate record — an intentional checkpoint where a human reviews and approves before work continues.
 
+### Or: a review without a build — `/run-advisory`
+
+To analyze or review an existing codebase instead of building, run the lightweight advisory path — a chain of read-only/review agents, hand-offs recorded as files under `agents-run/`, no `runs/` workspace:
+
+```text
+/run-advisory "auth review" architecture-guardian, security-engineer, code-reviewer
+```
+
+Omit the agent list to let the orchestrator pick the chain. For one specialist with no hand-off, just invoke that agent directly (it writes nothing). Full guide: [advisory-pipeline-usage.md](process/advisory-pipeline-usage.md).
+
 ---
 
 ## Use as a Claude Code plugin (CLI & web)
@@ -117,6 +127,7 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 
 - **28 agents** — see the [roster](process/agent-roster.md). Core 01–20 + expansion 21–28 (infrastructure, performance, visual/design-system, AI/prompt, privacy/compliance, accessibility, product-analytics).
 - **9 cases** — see the [playbook index](process/playbooks/README.md): `greenfield` (+`increment`), `brownfield-onboard`, `defect`, `incident`, `refactor`, `dependency-upgrade`, `spike`, `deprecation`, `data-operation`.
+- **Two ways to run** — a full **delivery run** (`/run-delivery`, builds & ships, state under `runs/`) and a lightweight **advisory review** (`/run-advisory`, read-only/review agents chained over an existing codebase, hand-offs as files under `agents-run/`). See [advisory-pipeline-usage.md](process/advisory-pipeline-usage.md) for when to use which.
 
 ---
 
