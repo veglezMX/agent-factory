@@ -5,7 +5,7 @@ trigger: Open feasibility or design question that must be answered before a real
 entry_criteria:
   - one named question with a stated decision it unblocks, scope-boxed (the question, not the build)
   - no real run open for the area under study (this is a pre-scoping probe, not in-flight work)
-agents: [01,02,04,07,08,13,14,21,23,25]
+agents: [01,02,04,07,08,13,14,21,23,25,29]
 skills: []
 gates: [findings]
 baseline: none
@@ -70,7 +70,8 @@ PHASE 1 — PROBE DESIGN
 
 PHASE 2 — PROBE (throwaway only; pick the agents the question needs)
   13-backend-domain-implementer (~)  throwaway service/logic spike
-  14-frontend-feature-builder (~)    throwaway UI/interaction spike
+  29-ui-layout-designer (~)           throwaway layout/data-presentation probe
+  14-frontend-feature-builder (~)    throwaway rendered interaction/code-feasibility spike
   21-infra-platform-engineer (~)     throwaway provisioning/runtime spike
   23-performance-load-engineer (~)   load/latency/capacity measurement
   25-ai-prompt-engineer (~)          model/prompt feasibility & quality probe
@@ -99,7 +100,7 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 
 ### Phase 1 — Probe design
 
-3. **Solution Designer — probe approach (`04`).** Receives the sharpened question and success criteria. Produces one or more **probe approaches**, each stating what it would prove and what it would *not*, plus the explicit decision that "throwaway is acceptable here" — probes optimize for a decisive answer, not for production quality. Names which build agents (`13/14/21/23/25`) each approach needs.
+3. **Solution Designer — probe approach (`04`).** Receives the sharpened question and success criteria. Produces one or more **probe approaches**, each stating what it would prove and what it would *not*, plus the explicit decision that "throwaway is acceptable here" — probes optimize for a decisive answer, not for production quality. Names which specialists (`13/14/21/23/25/29`) each approach needs.
 4. **Architecture Guardian — probe sanity (`08`).** Reviews each probe approach for two things only: is it **decisive** (a clean result actually answers the question) and is it **contained** (it cannot leak into or depend on real product surfaces). **↺** A probe that would prove nothing, or that cannot be kept throwaway, returns to `04`. This is not a design gate — there is no architecture to approve, only a probe to validate.
 5. **Product Planner — probe ordering (`07`).** Receives the validated probe approaches. Produces the **probe order**: cheapest decisive probe first, so the question can close as soon as evidence is sufficient without running every probe. Ordering is dependency/decisiveness only — no time estimates.
 
@@ -108,17 +109,18 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 The Orchestrator calls only the probe agents the question requires. **Every artifact any of these agents produces is stamped THROWAWAY: it is never merged to `main`, never promoted to canonical, and exists solely as evidence for the findings record.** This is the case's key invariant.
 
 6. **Backend Domain Implementer — throwaway service (`13`).** When the question is about backend feasibility (an algorithm, a data access pattern, a domain rule's tractability). Produces a disposable service or script that exercises the uncertain path and records observed behavior. No contracts, no migrations promoted, no service-boundary commitments — those belong to the follow-on case.
-7. **Frontend Feature Builder — throwaway UI (`14`).** When the question is about interaction or visual feasibility. Produces a disposable screen/interaction stub that surfaces the uncertainty (does the flow feel right, is the rendering tractable). Not wired to real contracts; not held to i18n/a11y completeness — it is evidence, not a feature.
-8. **Infrastructure & Platform Engineer — throwaway provisioning (`21`).** When the question is about runtime, provisioning, or platform feasibility (can this run in the target environment, does this resource shape exist). Produces a disposable environment/manifest used to observe the answer, then torn down. Nothing is wired into real delivery.
-9. **Performance & Load Engineer — measurement (`23`).** When the question is quantitative (latency, throughput, capacity, cost-at-scale). Produces the measurement harness and the recorded numbers against the success criteria from step 2. The harness is throwaway; the numbers are the deliverable evidence.
-10. **AI & Prompt Engineer — model/prompt probe (`25`).** When the question is about an AI/model capability (is quality sufficient, is a prompt/approach viable, is latency/cost acceptable). Produces a disposable evaluation against representative inputs and reports quality/confidence against the success criteria. No production prompt or model wiring is committed.
+7. **UI Layout Designer — throwaway layout (`29`).** When the uncertainty is page composition, information hierarchy, responsive layout, or whether selected endpoint data can support a useful interface. Produces a disposable data-to-UI map, layout/prototype, and observed design findings without changing contracts or inventing fields.
+8. **Frontend Feature Builder — throwaway rendered UI (`14`).** When the question requires code/rendering feasibility beyond a layout decision. Produces a disposable screen/interaction stub. Not wired to real contracts and never promoted.
+9. **Infrastructure & Platform Engineer — throwaway provisioning (`21`).** When the question is about runtime, provisioning, or platform feasibility. Produces a disposable environment/manifest, then tears it down.
+10. **Performance & Load Engineer — measurement (`23`).** When the question is quantitative. Produces the measurement harness and recorded numbers against the success criteria.
+11. **AI & Prompt Engineer — model/prompt probe (`25`).** When the question is about an AI/model capability. Produces a disposable evaluation against representative inputs and reports quality/confidence.
    - **↺** At any point, if the question cannot be answered without a human decision (a business trade-off, a risk acceptance, a "which matters more" call), the owning agent sets `status: blocked`, records the decision needed in `open_questions`, and routes to `01 → human`. Probes never invent the business answer.
 
 ### Phase 3 — Decide
 
-11. **Requirements Analyst — findings & recommendation (`02`).** Receives the probe evidence. Produces the **decision/findings record**: the answer to the question, the **confidence** in it, the evidence trail (pointing at the throwaway artifacts), the **recommended follow-on case** (usually `greenfield` increment or `refactor`), and a **seeded packet** for that case — the scope, constraints, and risks the spike surfaced, expressed in the next case's input shape. The findings record explicitly states that all probe code is throwaway.
+12. **Requirements Analyst — findings & recommendation (`02`).** Receives the probe evidence. Produces the **decision/findings record**: the answer to the question, the **confidence** in it, the evidence trail (pointing at the throwaway artifacts), the **recommended follow-on case** (usually `greenfield` increment or `refactor`), and a **seeded packet** for that case — the scope, constraints, and risks the spike surfaced, expressed in the next case's input shape. The findings record explicitly states that all probe code is throwaway.
     - **`[H]` GATE F — Findings/Decision.** The approver accepts (or rejects) the findings. There is **no release gate** — nothing ships. This gate's intent — a human accepts a decision record rather than authorizing a deployment — relies on a handoff-protocol §3.4 case-specific-gate definition (the orchestrator will add that section). A `rejected` findings gate routes back: if the question was wrong, to `02` (re-frame); if the probe was inconclusive, to `04` (re-probe).
-12. **Orchestrator close-out (`01`).** On an accepted findings gate, the Orchestrator closes the run: it **discards or quarantines** the throwaway artifacts (they never reach `main` or canonical `docs/`), records the closure with **no canonical promotion** (`baseline: none`), and hands the seeded packet to the recommended follow-on case as that case's trigger. The spike's job is done the moment the next case has what it needs to be scoped.
+13. **Orchestrator close-out (`01`).** On an accepted findings gate, the Orchestrator closes the run: it **discards or quarantines** the throwaway artifacts (they never reach `main` or canonical `docs/`), records the closure with **no canonical promotion** (`baseline: none`), and hands the seeded packet to the recommended follow-on case as that case's trigger. The spike's job is done the moment the next case has what it needs to be scoped.
 
 ---
 

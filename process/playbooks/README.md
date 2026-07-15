@@ -1,6 +1,6 @@
 # Playbooks — Case Index
 
-The roster (`../agent-roster.md`) and handoff protocol (`../agent-handoff-protocol.md`) are the shared spine: the complete set of agents and the rules by which work moves between them. A **playbook** is the per-**case** execution recipe — which agents and skills a class of work uses, in what order, with which gates and loop-backs. Not every case runs every agent.
+The roster (`../agent-roster.md`), invocation contract (`../agent-invocation-contract.md`), and handoff protocol (`../agent-handoff-protocol.md`) are the shared spine. A **playbook** is the per-case pipeline recipe; standalone calls do not need a playbook.
 
 Authoring contract: `playbook-schema.md`. Adding a case is a drop-in — one new `<case>.md` conforming to the schema, plus a column in the matrix below. The roster and protocol do not change to add a case.
 
@@ -84,6 +84,7 @@ Every column is authoritative — each is taken from the agent set its playbook 
 | 26 | Privacy & Compliance Officer | ~ | ~ | – | – | – | – | – | ~ | ~ |
 | 27 | Accessibility Auditor | x | ~ | ~ | – | – | – | – | ~ | – |
 | 28 | Product Analytics & Instrumentation Engineer | x | ~ | – | – | – | – | ~ | ~ | – |
+| 29 | UI Layout Designer | x | – | – | – | – | – | ~ | – | – |
 
 Reading the columns: cases drop the discovery/design front-half (`02`–`08`) when there is no new scope to design (`defect`, `incident`, `dependency-upgrade`, `data-operation`); `brownfield-onboard` drops `09` because the foundation already exists; `spike` runs almost nothing to `x` because its only committed deliverable is a decision; `data-operation` collapses to the `11`+`17` core behind a pre-execution gate. The conditional (`~`) marks fire on what a given run actually touches — e.g. `10` only when an API moves, `26` only on regulated/PII data.
 

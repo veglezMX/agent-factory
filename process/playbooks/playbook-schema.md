@@ -29,7 +29,7 @@ closure: >                       # one line: what makes a run of this case "done
 ### Field rules
 
 - **`case`** — unique across all playbooks; equals the filename stem; equals the matrix column header in `README.md`.
-- **`agents`** — the subset of roster IDs (`01`–`20`) this case uses. Every ID **must** exist in the roster overview table. An ID not in the roster is an error (a conformance checker is a future drop-in; until then it is a review-time check).
+- **`agents`** — the subset of roster IDs (`01`–`29`) this case uses. Every ID **must** exist in the roster overview table. An ID not in the roster is an error (a conformance checker is a future drop-in; until then it is a review-time check).
 - **`skills`** — skill names the case relies on (e.g. `creating-stakeholder-packet`). Must exist in the skill set.
 - **`gates`** — ordered gate slugs. A case may legitimately have fewer gates than greenfield, or none. Gate semantics live in handoff-protocol §3.
 - **`baseline`** — `produces` (the case promotes requirements/glossary/architecture into canonical `docs/` at its terminal gate), `consumes` (the case diffs against existing canonical docs), or `none`.

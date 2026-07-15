@@ -24,7 +24,7 @@ This framework is authored once and run on several AI coding platforms. This doc
 | Agents | `.claude/agents/*.md` *(generated)* | `.github/agents/*.agent.md` *(source of truth)* | `.cursor/rules/*.mdc` *(reference)* | `.agents/*.yaml` *(generated, custom-mode format)* |
 | Skills | `.claude/skills/<name>/SKILL.md` | `.github/prompts/*.prompt.md` or manual | manual prompt | `.agents/skills/<name>/SKILL.md` |
 | Orchestrator start | `/run-delivery <run-id>` (main loop) | invoke `delivery-orchestrator` agent | drive in main chat | switch to the `delivery-orchestrator` mode |
-| Run state | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` |
+| Pipeline run state | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` |
 | Process docs | `process/`, `templates/` | same | same | same |
 
 ---
@@ -62,7 +62,7 @@ Roo Code:     read/search → read   |   edit → edit   |   execute → command
    - copies the `run-delivery` driver into `commands/`.
 2. For a **global** install nothing needs copying. For a **project** install, also copy `process/`, `templates/`, and (when you start) `runs/` into that project.
 3. Start a run with **`/run-delivery <run-id>`**. This is the key step: it makes your **main Claude session act as the Delivery Orchestrator**, because a Claude subagent cannot invoke other subagents — only the main loop can `Task`-dispatch the roster.
-4. Direct human use of any single agent still works via the agent picker / `Task`.
+4. Direct human use of any single agent works via the picker / `Task` with `mode: standalone`, a bounded task, and a target; no run ID or handoff is required.
 
 ### GitHub Copilot / VS Code
 
@@ -71,11 +71,13 @@ Roo Code:     read/search → read   |   edit → edit   |   execute → command
 3. **VS Code note:** the global dir above is the **Copilot CLI** convention. VS Code reads a repo's `.github/` (use `--scope project`) or its own profile dir; if you need a custom user-level folder there, point `chat.agentFilesLocations` / `chat.agentSkillsLocations` at it with an **absolute** path (VS Code does not expand `~`).
 4. Start a run by invoking the **`delivery-orchestrator`** agent and pasting/pointing at the packet.
 5. **Caveat:** whether `delivery-orchestrator` can invoke the other agents depends on your Copilot version's agent-to-agent support. If it can't, drive the sequence yourself: invoke each agent in playbook order, pasting the prior handoff as input.
+6. For standalone work, invoke the desired specialist directly with `mode: standalone`, a bounded task, and a target. No Orchestrator or handoff is involved.
 
 ### Cursor
 
 1. Run `scripts/install.sh --target cursor`. By default it installs **globally** to `~/.cursor/rules`; add `--scope project --path <dir>` for one project's `.cursor/rules/`. It writes `<name>.mdc` — each agent body as a reference rule with `alwaysApply: false`, so you can `@`-mention the one you need.
 2. Cursor has no native multi-agent orchestrator. Drive the run in the main chat: act as the orchestrator yourself (or paste the `delivery-orchestrator` rule), invoke each agent rule in playbook order, and write handoff files under `runs/<run-id>/` between steps.
+3. For standalone work, `@`-mention only the desired specialist rule and provide `mode: standalone`, a bounded task, and a target; do not create a run workspace or handoff.
 
 ### Roo Code / generic `.agents` harness
 
@@ -91,13 +93,14 @@ The framework is a **specification**, not a binding. To port it:
 - Map each agent's **posture** to your harness's tool permissions (table above).
 - Place agent bodies wherever your harness loads system prompts / personas.
 - Satisfy the orchestration requirement: either your harness lets one agent invoke another (wire 01 to call the rest), **or** your main control loop plays the orchestrator and dispatches the rest.
-- Use `runs/<run-id>/` as the on-disk state store and the handoff payload format from the protocol §2. As long as those hold, statelessness, auditability, and traceability are preserved.
+- Implement both modes from `process/agent-invocation-contract.md`: direct standalone calls return to the human, while pipeline calls use the Orchestrator.
+- For pipeline mode, use `runs/<run-id>/` as the on-disk state store and the handoff payload format from protocol §2. Standalone mode needs neither unless explicitly requested.
 
 ---
 
 ## The run process (entry point)
 
-Regardless of platform, a run is:
+Regardless of platform, a governed pipeline run is:
 
 1. **Packet** — author/freeze the Stakeholder Input Packet under `runs/<run-id>/00-packet/` (skill: `creating-stakeholder-packet`).
 2. **Boot** — invoke the orchestrator; it creates the run workspace (protocol §1) and routes the packet to the Requirements Analyst.

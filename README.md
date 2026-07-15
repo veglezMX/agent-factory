@@ -12,10 +12,10 @@ It is **not** an app. It is a reusable set of agent definitions, skills, process
 
 | Pillar | What it is | Where |
 |---|---|---|
-| **Packet** | The single source of business truth — a structured, plain-language brief. Everything traces back to it. | [`templates/stakeholder-input-packet.md`](templates/stakeholder-input-packet.md) + the `creating-stakeholder-packet` skill |
-| **Roster** | 26 specialized agents (orchestrator, requirements, design, build, hardening, delivery + expansion agents). Each has one job and hard boundaries. | [`process/agent-roster.md`](process/agent-roster.md) |
+| **Packet** | The pipeline source of business truth — a structured, plain-language brief. Standalone calls instead use the direct task and selected local references. | [`templates/stakeholder-input-packet.md`](templates/stakeholder-input-packet.md) + the `creating-stakeholder-packet` skill |
+| **Roster** | 29 specialized agents (orchestrator, requirements, UX/UI design, build, hardening, delivery + expansion agents). Each has one job and hard boundaries. | [`process/agent-roster.md`](process/agent-roster.md) |
 | **Playbooks** | Per-**case** recipes — which agents run, in what order, with which gates. 9 cases (greenfield, defect, incident, refactor, …). | [`process/playbooks/`](process/playbooks/README.md) |
-| **Handoff protocol** | How work moves between agents: payload format, run workspace, gates, escalation, context budget. | [`process/agent-handoff-protocol.md`](process/agent-handoff-protocol.md) |
+| **Invocation + handoff contracts** | How agents run independently or in a governed pipeline; payload format, run workspace, gates, escalation, and context budget. | [`process/agent-invocation-contract.md`](process/agent-invocation-contract.md) + [`process/agent-handoff-protocol.md`](process/agent-handoff-protocol.md) |
 
 A run is driven by the **Delivery Orchestrator** (agent 01): it picks the next agent per the playbook, carries context via append-only handoff files, halts at human **gates**, and records everything under `runs/<run-id>/` so any agent can be invoked cold and reconstruct state from disk alone.
 
@@ -24,14 +24,14 @@ A run is driven by the **Delivery Orchestrator** (agent 01): it picks the next a
 ## Repository layout
 
 ```text
-.github/agents/      28 agent definitions — Copilot/VS Code `.agent.md` format. SOURCE OF TRUTH.
+.github/agents/      29 agent definitions — Copilot/VS Code `.agent.md` format. SOURCE OF TRUTH.
 .github/skills/      skills in Copilot/manual form
 .claude/skills/      the same skills, Claude Code layout
 .claude/agents/      Claude Code agents — GENERATED from .github/agents by scripts/install.sh
 .claude/commands/    run-delivery — the orchestrator driver for Claude Code
 .claude-plugin/      plugin.json + marketplace.json — the Claude Code marketplace plugin
 agents/ skills/ commands/   plugin component dirs (Claude Code format) — GENERATED from .github
-process/             the spine: agent-roster.md, agent-handoff-protocol.md, playbooks/
+process/             the spine: roster, invocation contract, handoff protocol, playbooks/
 templates/           the Stakeholder Input Packet template
 runs/                per-run workspaces — the live state store (packet, requirements, gates, handoffs)
 scripts/             install.sh — install/convert the roster for your platform
@@ -82,6 +82,10 @@ Use the `creating-stakeholder-packet` skill (it interviews you), or copy [`templ
 
 The run pauses at each **human gate** (scope, design, release, …) until you sign the gate record — an intentional checkpoint where a human reviews and approves before work continues.
 
+### Or run one agent independently
+
+Invoke any specialist directly with `mode: standalone`, a bounded `task`, and a concrete `target`. Standalone calls do not require a run ID, packet, prior handoff, gate, or Orchestrator. For example, call `ui-layout-designer` with a page plus selected endpoint/client methods to design, review, or explicitly apply a layout improvement. See [`process/standalone-invocation.md`](process/standalone-invocation.md).
+
 ---
 
 ## Use as a Claude Code plugin (CLI & web)
@@ -115,7 +119,7 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 
 ## What's covered
 
-- **28 agents** — see the [roster](process/agent-roster.md). Core 01–20 + expansion 21–28 (infrastructure, performance, visual/design-system, AI/prompt, privacy/compliance, accessibility, product-analytics).
+- **29 agents** — see the [roster](process/agent-roster.md). Core 01–20 + expansion 21–29, including the standalone-friendly UI Layout Designer.
 - **9 cases** — see the [playbook index](process/playbooks/README.md): `greenfield` (+`increment`), `brownfield-onboard`, `defect`, `incident`, `refactor`, `dependency-upgrade`, `spike`, `deprecation`, `data-operation`.
 
 ---
@@ -132,4 +136,4 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 
 ## Extending it
 
-Adding an agent or a case is a drop-in — see the conformance rules in [`process/agent-roster.md`](process/agent-roster.md), [`process/playbooks/playbook-schema.md`](process/playbooks/playbook-schema.md), and the handoff [conformance checklist](process/agent-handoff-protocol.md). Agents follow the `prompt-anatomy` component structure; mirror an existing sibling of the same tool posture.
+Adding an agent or a case is a drop-in — see the conformance rules in [`process/agent-roster.md`](process/agent-roster.md), [`process/agent-invocation-contract.md`](process/agent-invocation-contract.md), [`process/playbooks/playbook-schema.md`](process/playbooks/playbook-schema.md), and the handoff [conformance checklist](process/agent-handoff-protocol.md). Agents follow the `prompt-anatomy` component structure; mirror an existing sibling of the same tool posture.

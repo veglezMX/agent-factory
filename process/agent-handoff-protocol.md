@@ -2,6 +2,8 @@
 
 **Purpose:** The roster defines *who* the agents are; the playbooks (`playbooks/`) define *which* of them run for each case and *when*. This document defines *how* work moves between them: the handoff payload format, the run workspace layout, gate semantics, escalation rules, and context-budget discipline. Without this contract, multi-agent workflows degrade into lossy chat history — agents repeat work, lose decisions, and silently drop risks.
 
+**Mode scope:** This protocol governs `pipeline` invocations. Direct, bounded human calls use `standalone` mode from [`agent-invocation-contract.md`](agent-invocation-contract.md) and do not require a run workspace or handoff unless the human explicitly requests pipeline-compatible artifacts.
+
 This protocol is project-agnostic. Teams adopt it verbatim or adapt field names, but every run should preserve the four properties it exists to guarantee:
 
 1. **Traceability** — every artifact traces to a packet section, a design decision, or a bundle task.
@@ -26,6 +28,8 @@ runs/
     │   └── open-questions.md
     ├── 02-design/
     │   ├── ux-inventory.md
+    │   ├── design-system.md
+    │   ├── ui-layouts/
     │   ├── architecture.md
     │   ├── stack-decision-record.md
     │   └── integration-inventory.md
@@ -45,7 +49,8 @@ runs/
     │   ├── infrastructure/                   (Infrastructure Guardian, agent 22)
     │   ├── performance/                      (Performance & Load Engineer, agent 23)
     │   ├── compliance/                       (Privacy & Compliance Officer, agent 26)
-    │   └── accessibility/                    (Accessibility Auditor, agent 27)
+    │   ├── accessibility/                    (Accessibility Auditor, agent 27)
+    │   └── ui/                               (UI Layout Designer, agent 29)
     └── state.md                              (rolling run state; orchestrator-owned)
 ```
 
@@ -103,7 +108,7 @@ next_recommended: 10-contract-client-guardian
 
 ### 2.3 Hard rules
 
-- **No handoff, no work.** An agent invoked without an inbound handoff file (or the packet, for the Requirements Analyst) must refuse and ask the Orchestrator to issue one.
+- **No handoff, no pipeline work.** A `pipeline` invocation without an inbound handoff file (or the packet, for the Requirements Analyst boot case) must refuse and ask the Orchestrator to issue one. A bounded direct human task is a valid `standalone` invocation and follows the Agent Invocation Contract instead.
 - **`status: complete` requires verification.** An implementer claiming completion must list the commands it ran and their results under *Verification performed*. "It should work" is `partial`, not `complete`.
 - **`blocked` must name the blocker.** Either an `open_questions` entry (human-blocked) or a `next_recommended` agent (dependency-blocked). Never both empty.
 - **Decisions are sentences, not paragraphs.** Each decision line names what was decided and cites its source (packet section, design doc, or finding ID). Undecidable items go to `open_questions`.
@@ -253,12 +258,13 @@ Never a parallel run. Two active runs violate the concurrency rule (§4) and mak
 
 ## 7. Conformance Checklist for Agent Authors
 
-When writing each `*.agent.md` file from the roster, verify the agent's prompt enforces this protocol:
+When writing each `*.agent.md` file from the roster, verify the agent's prompt enforces this protocol in `pipeline` mode and the Agent Invocation Contract in `standalone` mode:
 
-- [ ] Refuses to work without an inbound handoff (or the packet, for 02).
-- [ ] Reads only: inbound handoff, listed inputs, `state.md`.
+- [ ] Selects `pipeline` versus `standalone` using the Agent Invocation Contract.
+- [ ] Refuses pipeline work without an inbound handoff (or the packet, for 02) but accepts a bounded direct human task in standalone mode.
+- [ ] In pipeline mode, reads the inbound handoff, listed inputs, and `state.md`; in standalone mode, reads only the bounded target and relevant discovered/supplied references.
 - [ ] Writes outputs only inside its roster boundary.
-- [ ] Ends every session by writing a handoff file with full frontmatter.
+- [ ] Ends every pipeline session with a handoff file; returns standalone results directly unless a pipeline-compatible artifact was requested.
 - [ ] Marks `complete` only with verification evidence.
 - [ ] Escalates ambiguity as `open_questions` instead of guessing.
 - [ ] Recommends a next agent; never invokes specialists directly (01 excepted).

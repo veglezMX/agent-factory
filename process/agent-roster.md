@@ -2,10 +2,11 @@
 
 **Purpose:** A project-agnostic catalog of the agents required to take a complete Stakeholder Input Packet and turn it into a deployed full-stack application. Teams use this list to author their own agent files (e.g., `.github/agents/*.agent.md` in VS Code), adapting wording to their stack while preserving each agent's scope and invocation rules.
 
-This roster pairs with three companion documents:
+This roster pairs with four companion documents:
 
-- **Stakeholder Input Packet** — the trigger artifact and sole source of business truth.
+- **Stakeholder Input Packet** — the pipeline trigger artifact and source of business truth for a governed run; standalone work uses the direct task and its selected local references.
 - **Agent Handoff Protocol** — the payload format, gates, and loop-back rules agents use to pass work.
+- **Agent Invocation Contract** — the shared `pipeline` and `standalone` invocation semantics every agent follows.
 - **Playbooks** (`playbooks/`) — the per-case execution recipes: which agents and skills a class of work uses, in what order. The roster is the complete set; each playbook is a subset. See `playbooks/README.md`.
 
 ---
@@ -32,9 +33,9 @@ Tool names vary by editor and extension version; the posture is the contract, th
 
 ### Invocation legend
 
-- **Called by** — the agent(s) that normally invoke it. The Delivery Orchestrator is the default caller for everything; entries list additional legitimate callers.
+- **Called by** — pipeline callers. The Delivery Orchestrator is the default; every specialist is also directly human-invocable in `standalone` mode under `agent-invocation-contract.md`.
 - **May call** — subagents it is allowed to invoke (most specialists call none; they *recommend* a next agent in their handoff instead).
-- **User-invocable** — whether it should appear in the editor's agent picker for direct human use.
+- **User-invocable** — every agent should appear in the picker. A direct bounded task is standalone; a full governed run starts with agent 01.
 
 ---
 
@@ -70,8 +71,9 @@ Tool names vary by editor and extension version; the posture is the contract, th
 | 26 | Privacy & Compliance Officer | Cross-cutting (conditional) | `R`, `E` on request | Orchestrator | None |
 | 27 | Accessibility Auditor | Cross-cutting (UI-gated) | `R`, `E` on request | Orchestrator, Code Reviewer | None |
 | 28 | Product Analytics & Instrumentation Engineer | 3 — Hardening | `E+T` | Orchestrator | None |
+| 29 | UI Layout Designer | 0 — Design / 3 — Fidelity Review | `E+T` (`design`/`review` read-only; explicit `apply`) | Orchestrator | None |
 
-Agents `01`–`20` are the core roster; `21`–`28` are expansion agents (see the dedicated section after Phase 4). `27` is UI-gated — it runs for any project with user-facing screens (skipped for API-only or headless), the same condition as `03` and `24`. `25` and `26` are conditional — engaged only when the packet calls for AI behavior or regulated/PII handling.
+Agents `01`–`20` are the core roster; `21`–`29` are expansion agents. `27` and `29` are UI-gated in pipeline runs; standalone calls may target any existing UI directly. `25` and `26` are conditional on AI behavior or regulated/PII handling.
 
 ---
 
@@ -167,7 +169,7 @@ These agents convert non-technical stakeholder input into the technical task bun
 
 ## Phase 2 — Build
 
-All build agents share two universal boundaries: they work only from an approved plan or bundle task, and they never broaden scope without a handoff. Each has `E+T` because real implementation requires running generators, builds, and tests locally.
+All build agents share two universal boundaries: in pipeline mode they work from the approved plan or bundle task; in standalone mode they work from the direct task's bounded target and outcome. They never broaden scope silently. Each has `E+T` because real implementation requires running generators, builds, and tests locally.
 
 ### 09 — Foundation Engineer
 
@@ -221,7 +223,7 @@ All build agents share two universal boundaries: they work only from an approved
 
 ### 14 — Frontend Feature Builder
 
-**Does:** Implements shells, screens, routing, state management, and all route-level UX states from the UX Flow Designer's inventory, consuming only generated API clients and keeping mocks contract-aligned. Preserves i18n, theming, accessibility, and auth-token flow.
+**Does:** Implements shells, screens, routing, state management, approved UI Layout Designer compositions, and all route-level UX states, consuming only generated API clients and keeping mocks contract-aligned. Preserves i18n, theming, accessibility, visual acceptance criteria, and auth-token flow.
 
 **Scope:** Owns frontend directories, frontend tests, and mock handlers. Never changes backend contracts (handoff), never hardcodes user-facing strings outside i18n, never implements business rules in the UI, never weakens auth behavior.
 
@@ -299,9 +301,9 @@ All build agents share two universal boundaries: they work only from an approved
 
 ---
 
-## Expansion Agents (21–28)
+## Expansion Agents (21–29)
 
-These agents extend the core roster for concerns the original twenty either folded into a neighbor or left implicit: cloud provisioning, infrastructure review, non-functional performance, visual/design-system authoring, in-product AI, legal/regulatory data obligations, accessibility review, and product analytics. Each is opt-in per case (see `playbooks/README.md`). The author/reviewer separation and star call-graph rules apply unchanged — `21` authors infrastructure and `22` reviews it, exactly as `04`↔`08`; and `27` reviews the accessibility that `24`/`03` author and `14` implements, closing that author/reviewer pair the same way. Agents `25` and `26` are conditional, engaged only when the packet calls for AI behavior or regulated/PII handling; `27` is UI-gated (skipped for API-only or headless projects); `28` is the analytics counterpart to the Observability Engineer (`16`) the way `26` is the distinct-lens counterpart to the Security Engineer (`15`).
+These agents extend the core roster for cloud provisioning, infrastructure review, non-functional performance, visual/design-system authoring, in-product AI, legal/regulatory data obligations, accessibility review, product analytics, and page-level UI composition. Each is opt-in per case. In pipeline mode the author/reviewer separation and star call graph apply; in standalone mode each accepts a bounded direct human task without requiring the rest of the roster. Agent `29` closes the gap between UX structure (`03`), system-level visual rules (`24`), and frontend implementation (`14`).
 
 ### 21 — Infrastructure & Platform Engineer
 
@@ -337,11 +339,11 @@ These agents extend the core roster for concerns the original twenty either fold
 
 **Does:** The visual and aesthetic counterpart to the UX Flow Designer (03). Translates the packet's branding and accessibility section into a design system: design tokens (color, type scale, spacing, radius, elevation, motion), component visual specs and their visual states, light/dark theming, responsive breakpoints, and accessibility compliance (contrast, focus, reduced motion) — all attached to the UX inventory's screens and route-states. Optional for API-only or headless projects.
 
-**Scope:** Owns the design-token set, component visual specs, theming, breakpoints, and accessibility compliance constraints. Never implements components or stylesheets (that is the Frontend Feature Builder, which consumes this spec), never defines flows, screens, or route states (that is the UX Flow Designer), never defines API contracts, never overrides branding or accessibility requirements from the packet.
+**Scope:** Owns the design-token set, component visual specs, theming, breakpoints, and accessibility compliance constraints. Never composes complete page layouts (UI Layout Designer 29), implements components/stylesheets (Frontend Feature Builder 14), defines flows/screens/route states (UX Flow Designer 03), or defines API contracts.
 
 **Tools:** `E` restricted to design documents. No application code.
 
-**Invocation:** Called by the Orchestrator after the UX Flow Designer's interface inventory is available, for any project with user-facing screens; feeds the Frontend Feature Builder (14). Calls no one. User-invocable: **yes**.
+**Invocation:** Pipeline: called after the UX inventory and feeds the UI Layout Designer (29). Standalone: directly callable for a bounded token/theme/component-system task. Calls no one.
 
 ### 25 — AI & Prompt Engineer
 
@@ -365,13 +367,13 @@ These agents extend the core roster for concerns the original twenty either fold
 
 ### 27 — Accessibility Auditor
 
-**Does:** Reviews — never authors — accessibility against the packet's accessibility obligations, the reviewing counterpart to the accessibility *authored* by the Visual & Design-System Designer (24) and noted by the UX Flow Designer (03), and *implemented* by the Frontend Feature Builder (14). Audits WCAG 2.2 AA — or the conformance level packet §10 sets — across the four POUR principles: perceivable (text alternatives, captions, color-independent meaning, contrast), operable (full keyboard operability, visible focus, logical focus order, no keyboard trap, target size, reduced motion, no time-trap), understandable (labels/instructions, error identification & suggestion, consistent navigation, page language), and robust (name/role/value, correct ARIA, semantic structure); also checks reflow/zoom to 400%, orientation, and that route-level UX states (loading, empty, error, unauthorized, success) are programmatically announced and the §3 critical journeys are completable by keyboard and screen reader. Closes the same author/reviewer gap as 04↔08 and 21↔22. Operates read-only for review; switches to edit-capable only when explicitly tasked to author a named accessibility artifact (e.g., an accessibility conformance report / VPAT / ACR). UI-gated — runs for any project with user-facing screens, optional for API-only or headless projects (the same condition as 03 and 24); not conditional on regulated/PII data (that is 26's condition).
+**Does:** Independently reviews accessibility authored across the Visual & Design-System Designer (24), UX Flow Designer (03), and UI Layout Designer (29), then implemented by the Frontend Feature Builder (14). Audits WCAG 2.2 AA — or the supplied conformance level — across POUR, reflow/zoom, orientation, route-state announcements, keyboard use, and screen-reader completion.
 
 **Scope:** Owns accessibility findings by severity (written to `runs/<run-id>/findings/accessibility/`), the WCAG conformance verdict on every reviewed design spec or UI diff, and (when tasked) a named accessibility conformance artifact. Never implements components or stylesheets (that is the Frontend Feature Builder 14, which it reviews), never defines flows, screens, or route states (UX Flow Designer 03), never defines design tokens or component visual specs (Visual & Design-System Designer 24, which it reviews), never weakens or quietly lowers an accessibility requirement set by packet §10, never approves accessibility behavior untraceable to packet §10 (or §12/§3/§13), never edits any file outside an explicit authoring task, never invokes another specialist. Traces decisions to packet §10 (Languages, Branding & Accessibility), with §12 (Devices & Channels — responsive/zoom/touch-target/orientation), §3 (User Journeys — keyboard & screen-reader completion), and §13 (Acceptance Examples — when accessibility is an acceptance condition).
 
 **Tools:** `R` by default; `E` only under an explicit authoring task.
 
-**Invocation:** Called by the Orchestrator at the design gate (to review 24's spec and 03's state inventory before build), at a Hardening checkpoint once frontend behavior stabilizes (to review 14's UI), and pre-release; the Code Reviewer (18) may route a UI diff to it directly. Skipped for API-only or headless projects. Calls no one; recommends a remediating agent (24 for a design-spec a11y gap, 14 for an implementation a11y gap, 03 for a flow/navigation a11y gap) and hands back to 01. User-invocable: **yes**.
+**Invocation:** Pipeline: reviews agents 24/03/29 at the design gate and agent 14 during Hardening/pre-release. Standalone: directly audits a bounded screen/layout/diff or authors a named accessibility artifact. Calls no one.
 
 ### 28 — Product Analytics & Instrumentation Engineer
 
@@ -383,12 +385,22 @@ These agents extend the core roster for concerns the original twenty either fold
 
 **Invocation:** Called by the Orchestrator in Phase 3 — Hardening, once product behavior stabilizes and before final validation, cross-cutting in parallel with the Observability Engineer (16). Calls no one; recommends a remediating agent (13 for a needed behavior change, 11 for a retention concern on stored analytics, 26 for consent/lawful-basis, 16 if a request is really operator telemetry) and hands back to 01. User-invocable: **yes**.
 
+### 29 — UI Layout Designer
+
+**Does:** Turns the data available from selected endpoints/generated clients into clear page-level information hierarchy, responsive composition, complete data states, interaction notes, and observable visual acceptance baselines. Supports `design`, `review`, and explicitly authorized `apply` operations. In standalone mode it can improve an existing page from its current code and data sources without requiring a packet, UX inventory, or full run.
+
+**Scope:** Owns data-to-UI mapping, page composition, responsive/state layouts, layout prototypes or reference renders when tooling permits, visual acceptance criteria, and fidelity findings. In explicit standalone `apply`, may edit only presentational frontend code in the named target. Never changes contracts, generated clients, endpoint/query semantics, business rules, authorization, journeys/routes, global design tokens, or backend/data code; never invents fields unavailable from selected data sources.
+
+**Tools:** `E+T`, mode-restricted: `design` and `review` do not edit application code; `apply` edits only the named presentation boundary and runs project-local frontend checks.
+
+**Invocation:** Pipeline: called after 03 and 24 for layout authoring and again during Hardening for fidelity review. Standalone: directly callable with a target page/component, selected endpoints/client methods, and a bounded goal; UX/design-system artifacts are optional. Calls no one. User-invocable: **yes**.
+
 ---
 
 ## Adoption Notes for Teams
 
 1. **Minimum viable roster.** If you must start smaller, the irreducible core is: Orchestrator (01), Requirements Analyst (02), Solution Designer (04), Backend Implementer (13), Frontend Builder (14), Validation & Test Engineer (17), Code Reviewer (18). Every agent you omit becomes an implicit responsibility of one of these — make that assignment explicit in the absorbing agent's file rather than letting it happen silently.
 2. **Author/reviewer pairs are non-negotiable.** Solution Designer ↔ Architecture Guardian and Implementers ↔ Code Reviewer must remain separate agents. An agent that reviews its own output is a rubber stamp.
-3. **Specialists recommend, the Orchestrator routes.** No specialist invokes another specialist directly; each ends its handoff with a recommended next agent, and the Orchestrator decides. This keeps the call graph a star, not a web, and makes runs auditable.
+3. **Pipeline routing stays a star; standalone returns to the caller.** No specialist invokes another specialist directly. Pipeline work recommends a next agent through the Orchestrator; standalone work returns directly to the human with optional advice.
 4. **Terminal access is the privilege to watch.** `E+T` agents can run anything; constrain them in their agent files to project-local commands (tests, builds, generators, migrations against local databases) and forbid network-mutating or environment-mutating commands outside their boundary.
-5. **The packet is upstream of everything.** When any agent cannot trace a decision back to a packet section or an approved design document, the correct move is a blocking question routed to the human — never a guess.
+5. **Truth depends on invocation mode.** Pipeline decisions trace to the packet and approved artifacts. Standalone decisions trace to the direct task, selected references, and existing target behavior. In either mode, consequential assumptions are explicit and unavailable data is never invented.
