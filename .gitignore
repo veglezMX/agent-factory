@@ -41,3 +41,7 @@ Thumbs.db
 *.local
 /tmp/
 /scratch/
+
+# Advisory pipeline runs are throwaway by default (see process/advisory-pipeline-usage.md).
+# To keep a specific run, commit its folder deliberately: `git add -f agents-run/<folder>`.
+agents-run/

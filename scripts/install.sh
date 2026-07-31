@@ -24,7 +24,7 @@ DRY_RUN=false
 KEEP_EXISTING=false
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-VALID_TARGETS="claude cursor copilot agents plugin repo"
+VALID_TARGETS="claude cursor copilot agents roo zoo plugin repo"
 VALID_SCOPES="global project"
 
 usage() {
@@ -36,13 +36,17 @@ Usage:
   scripts/install.sh --target claude --scope project --path DIR # project -> DIR/.claude
   scripts/install.sh --target cursor                            # global  -> ~/.cursor/rules
   scripts/install.sh --target copilot                           # global  -> ~/.copilot (agents+skills)
-  scripts/install.sh --target agents                            # global  -> ~/.agents (Roo custom-mode)
+  scripts/install.sh --target agents                            # global  -> ~/.agents (generic per-agent custom-mode files)
+  scripts/install.sh --target roo                               # global  -> Zoo/Roo custom_modes.yaml (editor globalStorage)
+  scripts/install.sh --target roo --scope project --path DIR    # project -> DIR/.roomodes (native single-file format)
   scripts/install.sh --target plugin                            # regenerate this repo's plugin dirs
   scripts/install.sh --target repo                              # regenerate EVERY derived dir in this repo
   scripts/install.sh --target repo --dry-run                    # show what would change; write nothing
 
 Flags:
-  --target  claude | cursor | copilot | agents | plugin | repo   (default: claude)
+  --target  claude | cursor | copilot | agents | roo | zoo | plugin | repo   (default: claude)
+            ('roo' and 'zoo' are aliases — same .roomodes / custom_modes.yaml format;
+             global installs auto-detect Zoo Code and legacy Roo Code storage)
   --scope   global | project                                     (default: global)
   --path    DIR    project root (required when --scope project)
   --dest    DIR    alias for "--scope project --path DIR" (back-compat)
@@ -279,16 +283,18 @@ gen_agents() {
 }
 
 convert_claude() {
+  local cmd dest
   gen_agents "$DEST/.claude/agents"
   install_skills "$DEST/.claude/skills"
   install_commands "$DEST/.claude/commands"
-  echo "Done. Start a run with:  /run-delivery <run-id>"
+  echo "Done. Start a delivery run with:  /run-delivery <run-id>   or an advisory review with:  /run-advisory \"<topic>\""
 }
 
 # Claude Code marketplace plugin: components live at repo root (agents/ skills/
 # commands/) so the .claude-plugin/ manifest can auto-discover them. The two manifests
 # (.claude-plugin/plugin.json + marketplace.json) are tracked, not generated.
 convert_plugin() {
+  local cmd
   gen_agents "$DEST/agents"
   install_skills "$DEST/skills"
   install_commands "$DEST/commands"
@@ -443,8 +449,156 @@ convert_agents() {
   gen_agents_roo "$DEST/.agents"
   install_skills "$DEST/.agents/skills"
   echo "Done. Point your harness at $DEST/.agents (one custom-mode YAML per agent)."
-  echo "Note: Roo Code itself reads a single .roomodes (customModes: array); these per-agent"
-  echo "      files target generic .agents-style loaders. See PORTABILITY.md."
+  echo "Note: Roo Code itself reads a single .roomodes (customModes: array) — use '--target roo'"
+  echo "      for that native single-file layout. These per-agent files target generic"
+  echo "      .agents-style loaders. See PORTABILITY.md."
+}
+
+# --- Native Roo Code target (single .roomodes with a customModes: array) --------
+# Unlike the generic "agents" target (a folder of per-agent files), Roo Code itself
+# loads ONE file — the project-level .roomodes at the workspace root, or the global
+# custom_modes.yaml in its settings dir — holding a top-level customModes: array.
+# This target emits that single file directly, so no manual merge step is needed.
+
+# Emit one customModes entry (a YAML block-sequence item) for a source agent file.
+# Indentation contract: the "- slug:" item sits at 2 spaces, its keys at 4, and the
+# block-scalar bodies at 6 (a block scalar must out-indent its key). roleDefinition
+# is the body's "You are …" persona; whenToUse is the description; customInstructions
+# is the full body verbatim (its complete operating manual is preserved).
+emit_roomode_entry() {
+  local src="$1" base slug name desc role
+  base="$(basename "$src" .agent.md)"
+  slug="$(field_value "$src" name)"; [[ -n "$slug" ]] || slug="$base"
+  name="$(title_case "$slug")"
+  desc="$(field_value "$src" description)"
+  # persona paragraph: the "You are …" block, up to the next blank line
+  role="$(awk 'BEGIN{fm=0;cap=0}
+               /^---[[:space:]]*$/{fm++; next}
+               fm>=2{
+                 if(!cap){ if($0 ~ /^You are/) cap=1; else next }
+                 if($0 ~ /^[[:space:]]*$/) exit
+                 print $0
+               }' "$src")"
+  [[ -n "$role" ]] || role="$desc"             # fallback if no "You are" line
+  echo "  - slug: $slug"
+  echo "    name: $name"
+  echo "    roleDefinition: |-"
+  printf '%s\n' "$role" | sed 's/^./      &/'
+  if [[ -n "$desc" ]]; then
+    echo "    whenToUse: |-"
+    printf '      %s\n' "$desc"
+  fi
+  # groups inline (a flow sequence is valid YAML even when nested); reuse the posture map
+  printf '    %s\n' "$(roo_groups_line "$(grep -m1 '^tools:' "$src" || true)")"
+  echo "    customInstructions: |-"
+  # the full body, verbatim, from its first non-blank line, indented under the scalar
+  awk 'BEGIN{fm=0;started=0}
+       /^---[[:space:]]*$/{fm++; next}
+       fm>=2{
+         if(!started){ if($0 ~ /^[[:space:]]*$/) next; started=1 }
+         if($0 ~ /^[[:space:]]*$/) print ""; else print "      " $0
+       }' "$src"
+}
+
+# Convert .github/agents/*.agent.md into a single native Roo Code .roomodes file.
+gen_roomodes() {
+  local out_file="$1"; mkdir -p "$(dirname "$out_file")"
+  local count=0 src
+  echo "customModes:" > "$out_file"
+  for src in "$AGENTS_SRC"/*.agent.md; do
+    [[ -e "$src" ]] || continue
+    [[ "$(basename "$src" .agent.md)" == "test" ]] && continue   # skip the editor scaffold
+    emit_roomode_entry "$src" >> "$out_file"
+    count=$((count+1))
+  done
+  echo "  $count agents -> $out_file (native Roo Code customModes: array)"
+}
+
+# Candidate dirs that hold the GLOBAL modes file (custom_modes.yaml). Roo Code and
+# its active successor Zoo Code (the community fork; Roo was archived in 2026) both
+# store global modes inside the editor's VS Code globalStorage for the extension —
+# NOT in $HOME. Zoo Code keeps the same format and filenames (.roomodes,
+# custom_modes.yaml, the customModes: array); only the extension id differs:
+#   zoocodeorganization.zoo-code  (Zoo Code — current)
+#   rooveterinaryinc.roo-cline    (Roo Code — legacy)
+# The "User" dir location depends on the install: a DESKTOP editor uses an OS config
+# root (<root>/<Editor>/User), while a REMOTE/SERVER editor (SSH, WSL, devcontainer,
+# Codespaces, code-server) uses ~/.<editor>-server/data/User. We enumerate both,
+# crossed with the two extension ids. Override the search with ROO_SETTINGS_DIR=<dir>.
+roo_global_settings_dirs() {
+  if [[ -n "${ROO_SETTINGS_DIR:-}" ]]; then printf '%s\n' "$ROO_SETTINGS_DIR"; return; fi
+  local root e ext userdir
+  local exts=("zoocodeorganization.zoo-code" "rooveterinaryinc.roo-cline")
+  local userdirs=()
+
+  # Desktop editors: <os-config-root>/<Editor>/User
+  local editors=("Code" "Code - Insiders" "VSCodium" "Cursor" "Windsurf")
+  case "$(uname -s)" in
+    Darwin) root="$HOME/Library/Application Support" ;;
+    Linux)  root="${XDG_CONFIG_HOME:-$HOME/.config}" ;;
+    *)      root="${APPDATA:-$HOME/.config}" ;;            # Windows (Git Bash / MSYS)
+  esac
+  for e in "${editors[@]}"; do
+    userdirs+=("$root/$e/User")
+  done
+
+  # Remote / server editors (VS Code Server over SSH/WSL/devcontainers/Codespaces):
+  # ~/.<editor>-server/data/User — plus code-server's own layout.
+  for e in .vscode-server .vscode-server-insiders .cursor-server .windsurf-server .vscodium-server; do
+    userdirs+=("$HOME/$e/data/User")
+  done
+  userdirs+=("$HOME/.local/share/code-server/User")
+
+  for userdir in "${userdirs[@]}"; do
+    for ext in "${exts[@]}"; do
+      printf '%s\n' "$userdir/globalStorage/$ext/settings"
+    done
+  done
+}
+
+# Write the roster into the global custom_modes.yaml for every editor that has Zoo
+# Code (or legacy Roo Code) installed — i.e. whose globalStorage dir already exists.
+# If none is found, fail loudly with the candidate paths rather than silently
+# writing a file the extension will never read.
+install_roo_global() {
+  local wrote=0 dir ext_dir
+  while IFS= read -r dir; do
+    ext_dir="$(dirname "$dir")"                            # .../<extension-id>
+    # ROO_SETTINGS_DIR is taken verbatim; otherwise require the extension's storage to exist.
+    if [[ -n "${ROO_SETTINGS_DIR:-}" || -d "$ext_dir" ]]; then
+      gen_roomodes "$dir/custom_modes.yaml"
+      wrote=$((wrote+1))
+    fi
+  done < <(roo_global_settings_dirs)
+
+  if [[ $wrote -eq 0 ]]; then
+    {
+      echo "error: could not find Zoo Code / Roo Code global storage for any known editor."
+      echo "The global modes file is custom_modes.yaml under the editor's globalStorage:"
+      roo_global_settings_dirs | sed 's/^/  /'
+      echo "Fixes: (1) open Zoo Code in your editor at least once so that dir exists, then re-run;"
+      echo "       (2) set ROO_SETTINGS_DIR=<that settings dir> and re-run; or"
+      echo "       (3) use --scope project --path <dir> to write a workspace .roomodes instead."
+    } >&2
+    exit 1
+  fi
+
+  install_skills "$HOME/.roo/skills"                        # no native skills runtime; staged for manual use
+  echo "Done. Reload your editor window — the modes appear globally in Zoo Code / Roo Code."
+  echo "Switch to the 'delivery-orchestrator' mode to start a run."
+  echo "Skills have no native Roo runtime — staged under ~/.roo/skills for manual invoke. See PORTABILITY.md."
+}
+
+convert_roo() {
+  if [[ "$SCOPE" == "global" ]]; then
+    install_roo_global
+    return
+  fi
+  gen_roomodes "$DEST/.roomodes"
+  install_skills "$DEST/.roo/skills"
+  echo "Done. Roo Code reads $DEST/.roomodes natively (top-level customModes: array)."
+  echo "Start a run by switching to the 'delivery-orchestrator' mode and pointing it at the packet."
+  echo "Skills have no native Roo runtime — installed under $DEST/.roo/skills for manual invoke. See PORTABILITY.md."
 }
 
 # `repo` regenerates every derived directory tracked in THIS repository, in one pass,
@@ -466,8 +620,10 @@ case "$TARGET" in
   cursor)  convert_cursor ;;
   copilot) convert_copilot ;;
   agents)  convert_agents ;;
+  roo|zoo) convert_roo ;;
   plugin)  convert_plugin ;;
   repo)    convert_repo ;;
+  *) echo "unknown target: $TARGET (use claude | copilot | cursor | agents | roo | zoo | plugin | repo)" >&2; exit 1 ;;
 esac
 
 if $DRY_RUN; then

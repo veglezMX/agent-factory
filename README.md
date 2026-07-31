@@ -26,7 +26,7 @@ A run is driven by the **Delivery Orchestrator** (agent 01): it picks the next a
 ```text
 .github/agents/      29 agent definitions — Copilot/VS Code `.agent.md` format. SOURCE OF TRUTH.
 .github/skills/      5 skills (SKILL.md folders).                              SOURCE OF TRUTH.
-.github/commands/    run-delivery + run-status + new-agent.                    SOURCE OF TRUTH.
+.github/commands/    run-delivery + run-advisory + run-status + new-agent.     SOURCE OF TRUTH.
 .claude/             Claude Code agents/skills/commands — GENERATED from .github
 .cursor/rules/       Cursor reference rules — GENERATED from .github
 .claude-plugin/      plugin.json + marketplace.json — the Claude Code marketplace plugin
@@ -68,7 +68,11 @@ scripts/install.sh --target cursor
 # GitHub Copilot CLI — copies native agents + skills -> ~/.copilot/ (no conversion)
 scripts/install.sh --target copilot   # add --scope project --path <dir> for a repo's .github/
 
-# Generic ".agents" harness — one Roo Code custom-mode YAML per agent -> ~/.agents/
+# Zoo Code / Roo Code — native single .roomodes (customModes: array). 'roo' and 'zoo' are aliases.
+scripts/install.sh --target roo --scope project --path /path/to/your/project   # -> <dir>/.roomodes (recommended)
+scripts/install.sh --target roo   # global -> custom_modes.yaml in the editor's globalStorage (Zoo/Roo, auto-detected)
+
+# Generic ".agents" harness — one custom-mode YAML per agent -> ~/.agents/
 scripts/install.sh --target agents    # add --scope project --path <dir> for one project
 
 # Claude Code marketplace plugin — regenerates this repo's root agents/ skills/ commands/
@@ -91,6 +95,16 @@ Use the `creating-stakeholder-packet` skill (it interviews you), or copy [`templ
 - **Cursor / generic:** drive the orchestrator in your main chat; see PORTABILITY for the invocation caveat.
 
 The run pauses at each **human gate** (scope, design, release, …) until you sign the gate record — an intentional checkpoint where a human reviews and approves before work continues.
+
+### Or: a review without a build — `/run-advisory`
+
+To analyze or review an existing codebase instead of building, run the lightweight advisory path — a chain of read-only/review agents, hand-offs recorded as files under `agents-run/`, no `runs/` workspace:
+
+```text
+/run-advisory "auth review" architecture-guardian, security-engineer, code-reviewer
+```
+
+Omit the agent list to let the orchestrator pick the chain. For one specialist with no hand-off, just invoke that agent directly (it writes nothing). Full guide: [advisory-pipeline-usage.md](process/advisory-pipeline-usage.md).
 
 ### Or run one agent independently
 
@@ -132,7 +146,8 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 - **29 agents** — see the [roster](process/agent-roster.md). Core 01–20 + expansion 21–29, including the standalone-friendly UI Layout Designer.
 - **10 cases** — see the [playbook index](process/playbooks/README.md): `greenfield`, `increment`, `brownfield-onboard`, `defect`, `incident`, `refactor`, `dependency-upgrade`, `spike`, `deprecation`, `data-operation`.
 - **5 skills** — `creating-stakeholder-packet` (author the packet by interview), `authoring-an-agent` and `authoring-a-playbook` (extend the framework without drifting from its conventions), `conducting-a-gate` (assemble evidence and write the gate record), `resuming-a-run` (reconstruct a run's state from disk alone).
-- **3 commands** — `/run-delivery <run-id>` drives a governed run, `/run-status <run-id>` reports where one stands read-only, `/new-agent <slug>` scaffolds a conformant agent.
+- **4 commands** — `/run-delivery <run-id>` drives a governed run, `/run-advisory` chains read-only/review agents over an existing codebase, `/run-status <run-id>` reports where a run stands read-only, `/new-agent <slug>` scaffolds a conformant agent.
+- **Two ways to run** — a full **delivery run** (`/run-delivery`, builds & ships, state under `runs/`) and a lightweight **advisory review** (`/run-advisory`, read-only/review agents chained over an existing codebase, hand-offs as files under `agents-run/`). See [advisory-pipeline-usage.md](process/advisory-pipeline-usage.md) for when to use which.
 
 ---
 
