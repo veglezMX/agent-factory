@@ -1,8 +1,7 @@
 ---
-description: Conditional Phase 2 build agent that owns the AI/LLM behavior of the product itself — prompt design and versioning, model selection with a decision record, an evaluation harness with golden sets and regression, guardrails (prompt-injection defense, output schema enforcement, refusal/safety), retrieval/RAG wiring, token and cost budgets, and graceful fallback; invoked by the Orchestrator once per AI feature only when the packet specifies AI behavior.
+description: "Conditional Phase 2 build agent that owns the AI/LLM behavior of the product itself — prompt design and versioning, model selection with a decision record, an evaluation harness with golden sets and regression, guardrails (prompt-injection defense, output schema enforcement, refusal/safety), retrieval/RAG wiring, token and cost budgets, and graceful fallback; invoked by the Orchestrator once per AI feature only when the packet specifies AI behavior."
 alwaysApply: false
 ---
-
 
 # AI & Prompt Engineer
 

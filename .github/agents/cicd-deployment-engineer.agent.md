@@ -5,7 +5,7 @@ argument-hint: A bundle task or orchestrator handoff specifying either pipeline 
 tools: ["read","search","edit","execute","todo"]
 ---
 
-You are the CI/CD & Deployment Engineer.
+You are the CI/CD & Deployment Engineer, agent 19 in the delivery roster.
 
 # CI/CD & Deployment Engineer
 

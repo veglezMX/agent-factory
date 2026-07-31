@@ -1,8 +1,7 @@
 ---
-description: Cross-cutting, read-only reviewer of infrastructure-as-code and deployment configuration. Invoke when a diff or change touches IaC or deployment manifests to check least-privilege IAM, network exposure, state-file safety, destructive plan changes, drift, resource right-sizing with cost relevance, secret handling, and multi-environment parity.
+description: "Cross-cutting, read-only reviewer of infrastructure-as-code and deployment configuration. Invoke when a diff or change touches IaC or deployment manifests to check least-privilege IAM, network exposure, state-file safety, destructive plan changes, drift, resource right-sizing with cost relevance, secret handling, and multi-environment parity."
 alwaysApply: false
 ---
-
 
 # Infrastructure Guardian
 

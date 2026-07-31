@@ -6,6 +6,14 @@
 
 **Real artifacts:** the live run workspace is `../../runs/2026-06-comedor-vecinal/` — frozen packet, requirements, design docs, gate records, and sequential handoffs. That run is live through Phase 0 (design, Gate 2). The narrative below covers all phases to show the full shape of a greenfield run.
 
+> **Read this first — what is real here and what is illustration.**
+>
+> **Phase 0 is real.** Every artifact it names exists in the run workspace and this narrative is kept consistent with it. **Phases 1–4 are illustration** — the run halted at Gate 2 and never executed them. Do not read them as a record of work performed.
+>
+> **The run predates part of the current roster.** It was executed against the 20-agent roster, before agents `21`–`29` existed. Three of them are `x` in today's `gf` column and the run therefore does not show them: `24` Visual & Design-System Designer (no `02-design/design-system.md`), `29` UI Layout Designer (no `02-design/ui-layouts/`), and `27` Accessibility Auditor (no `findings/accessibility/`). **Under `../playbooks/greenfield.md` as it stands today, Gate 2 could not be signed without them** — the "skip if headless/API-only" escape does not apply to a product whose UX inventory runs to 35 screens. Read this as a worked example of the case logic, not as a conformance reference.
+>
+> One further deviation: handoff `0001` here is `human → 02-requirements-analyst`, whereas `../playbooks/greenfield.md` and `../agent-handoff-protocol.md` §1 both specify `0001-orchestrator-to-requirements-analyst`. The Orchestrator only boots at `0005`. The protocol is right; the run is the artifact of an earlier convention.
+
 ---
 
 ## Phase 0 — Discovery & Design
@@ -29,10 +37,11 @@
 
 ### `04` Solution Designer
 
-- **Service decomposition (6):** identity, menu, credit-ledger, notification, poll, ordering — with a data-ownership map (ordering stores a *price snapshot* at placement per rule 3; credit-ledger is the only writer of credit movements; ordering *coordinates* deduction through the ledger's API, never writes ledger rows).
-- **Dependency directions:** ordering → menu (read), ordering → credit-ledger (command), ordering → notification (event); poll → identity (eligibility read); nothing depends on ordering.
+- **Shape decision — a modular monolith, not a service fleet:** one deployable backend process over one PostgreSQL database, with module boundaries enforced in code and in CI. This is the instructive part of the example: the playbook's abstract "service decomposition" step did **not** produce services here. §11's "wrong balances are worse than downtime" makes the single ACID transaction the strongest available correctness tool, and a service split would force sagas over exactly the flows the packet declares most critical. The packet's reliability posture argued *against* distribution.
+- **Module decomposition (8):** identity-registry, menu, kitchen-hours, ordering, credit-ledger, polls, notifications, audit — each separately packaged with a narrow service API, its own tables, and import rules enforced by a linter contract in CI. `kitchen-hours` exists as its own module because FR-19 splits its ownership across two roles and both menu and ordering must consult it without owning it. Data-ownership map: ordering stores a *price snapshot* at placement per rule 3; credit-ledger is the sole writer of credit movements; ordering *coordinates* deduction through the ledger's service API, never writes ledger rows.
+- **Dependency directions:** a thin application layer above the modules holds one orchestrator function per use case and opens the single transaction; modules never reach around it to call each other except along the allowed edges.
 - **Consistency decision:** synchronous, transactional ledger writes — from §11's "wrong balances are worse than downtime."
-- **Integration inventory (3):** payment (Stripe; fake first), SMS (proposal; fake first), registry importer (file-based, matching the admins' spreadsheet).
+- **Integration inventory (3):** Mercado Pago card payments (top-ups in, removal refunds out; fake first), SMS provider (login codes only; fake first), registry importer (file-based, matching the admins' existing spreadsheet).
 - **Frontend topology:** two shells + admin area, shared foundation, generated clients only, MSW mocks contract-aligned.
 - Stack decision record with packet-traceable rationale.
 
@@ -42,7 +51,7 @@ Reviews boundary completeness, dependency directions, no service owning another'
 
 ### `05` Bundle Compiler → `06` Bundle Intake Validator
 
-Bundle: 6 OpenAPI contracts; schemas for residents, menus, orders, ledger, polls, notifications; foundation, shared, 3 integrations, 6 services, 2 shells + admin, security, observability; validation (invariant suite from the 9 rules; E2E from journeys A–E; acceptance gate from §13's 8 examples); containerization, CI/CD, deployment, documentation, release — plus the dependency graph. The Validator checks every journey reaches an E2E task, every rule an invariant, every screen a frontend task; **↺** blocking gaps to `05`.
+Bundle: OpenAPI contracts covering the eight module surfaces; schemas for residents, menus, orders, ledger, polls, notifications, audit; foundation, shared, 3 integrations, 8 modules, 2 shells + admin, security, observability; validation (invariant suite from the 9 rules; E2E from journeys A–E; acceptance gate from §13's 8 examples); containerization, CI/CD, deployment, documentation, release — plus the dependency graph. The Validator checks every journey reaches an E2E task, every rule an invariant, every screen a frontend task; **↺** blocking gaps to `05`.
 
 ## Phase 1 — Planning
 
@@ -53,11 +62,11 @@ Per vertical slice, ordered by business value: (1) access — registry import + 
 ## Phase 2 — Build
 
 - **`09` Foundation:** monorepo, package management, lint/format, shared primitives (error envelope, ID generation, clock abstraction for testable poll cycles), env contracts, db/gateway foundations, local compose runtime (services + db + fakes). Exit: fresh clone → running local env.
-- **`10` Contract & Client Guardian:** the six OpenAPI contracts using glossary terms verbatim (states are `placed|accepted|delivered|cancelled` — nothing else, anywhere); typed clients; MSW handlers from the same contracts.
+- **`10` Contract & Client Guardian:** the module-surface OpenAPI contracts using glossary terms verbatim (states are `placed|accepted|delivered|cancelled` — nothing else, anywhere); typed clients; MSW handlers from the same contracts.
 - **`11` Data & Migration:** ledger table **append-only** (no UPDATE/DELETE paths, enforced at the database layer); non-negative balance transactionally; one-vote-per-resident-per-poll as a uniqueness constraint; order rows carry the price snapshot. Seeds: demo registry, sample menu, deterministic test residents.
-- **`12` Integration:** payment fake (deterministic success/failure/abandon for Journey B), SMS fake (records OTP sends for tests), registry importer (parses the admins' actual spreadsheet). Real Stripe/SMS adapters stubbed (fake-first per §7).
-- **`15` Security review #1:** OTP flow (rate limiting on request/verify, code expiry, lockout), token lifecycle, the role/permission matrix from §8, integration egress (only the phone number to SMS; nothing user-identifying to payment beyond Stripe's needs).
-- **`13` Backend Domain:** shared → identity → menu → credit-ledger → notification → poll → ordering. Ordering last because it consumes menu, ledger, and notification. Contract/schema changes trigger `↺ 10` / `↺ 11`.
+- **`12` Integration:** payment fake (deterministic success/failure/abandon for Journey B), SMS fake (records OTP sends for tests), registry importer (parses the admins' actual spreadsheet). Real Mercado Pago and SMS adapters stubbed (fake-first per §7).
+- **`15` Security review #1:** OTP flow (rate limiting on request/verify, code expiry, lockout), token lifecycle, the role/permission matrix from §8, integration egress (only the phone number to SMS; nothing user-identifying to payment beyond what Mercado Pago requires).
+- **`13` Backend Domain:** shared → identity-registry → menu → kitchen-hours → credit-ledger → notifications → polls → audit → ordering. Ordering last because it consumes menu, kitchen-hours, ledger, and notifications. Contract/schema changes trigger `↺ 10` / `↺ 11`.
 - **`14` Frontend:** shared foundation (i18n es-MX, theme, a11y, auth token flow) → resident shell → operator shell → resident screens (incl. insufficient-credits state) → operator screens (queue oldest-first, menu editor, poll admin) → admin screens → composition. Every string in i18n from the first commit.
 
 ## Phase 3 — Hardening

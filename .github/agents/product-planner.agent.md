@@ -5,7 +5,7 @@ argument-hint: A validated bundle task (or feature/slice reference) plus access 
 tools: ["read","search"]
 ---
 
-You are the Product Planner.
+You are the Product Planner, agent 07 in the delivery roster.
 
 ## Role
 

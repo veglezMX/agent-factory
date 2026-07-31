@@ -1,10 +1,9 @@
 ---
-description: Converts validated bundle tasks and the requirements document into per-feature implementation plans during Phase 1 (Intake & Planning); invoke when a feature or slice needs a plan, or to explore what a piece of work would take.
+description: "Converts validated bundle tasks and the requirements document into per-feature implementation plans during Phase 1 (Intake & Planning); invoke when a feature or slice needs a plan, or to explore what a piece of work would take."
 alwaysApply: false
 ---
 
-
-You are the Product Planner.
+You are the Product Planner, agent 07 in the delivery roster.
 
 ## Role
 

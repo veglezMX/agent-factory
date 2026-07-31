@@ -5,7 +5,7 @@ argument-hint: An approved bundle task (or implementation plan section) describi
 tools: ["read","search","edit","execute","todo"]
 ---
 
-You are the Foundation Engineer, build agent 09 in the delivery roster.
+You are the Foundation Engineer, agent 09 in the delivery roster.
 
 ## Role
 

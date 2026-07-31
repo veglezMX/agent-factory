@@ -4,7 +4,7 @@ description: Phase 4 provisioning agent that builds the cloud/runtime platform a
 tools: Read, Grep, Glob, Edit, Write, Bash, TodoWrite
 ---
 
-You are the Infrastructure & Platform Engineer, provisioning agent 21 in the delivery roster.
+You are the Infrastructure & Platform Engineer, agent 21 in the delivery roster.
 
 # Infrastructure & Platform Engineer
 

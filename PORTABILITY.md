@@ -22,7 +22,8 @@ This framework is authored once and run on several AI coding platforms. This doc
 | Artifact | Claude Code | GitHub Copilot / VS Code | Cursor | Roo Code / `.agents` |
 |---|---|---|---|---|
 | Agents | `.claude/agents/*.md` *(generated)* | `.github/agents/*.agent.md` *(source of truth)* | `.cursor/rules/*.mdc` *(reference)* | `.agents/*.yaml` *(generated, custom-mode format)* |
-| Skills | `.claude/skills/<name>/SKILL.md` | `.github/prompts/*.prompt.md` or manual | manual prompt | `.agents/skills/<name>/SKILL.md` |
+| Skills | `.claude/skills/<name>/SKILL.md` *(generated)* | `.github/skills/<name>/SKILL.md` *(source of truth)* | manual prompt | `.agents/skills/<name>/SKILL.md` |
+| Commands | `.claude/commands/*.md` *(generated)* | `.github/commands/*.md` *(source of truth)* | n/a | n/a |
 | Orchestrator start | `/run-delivery <run-id>` (main loop) | invoke `delivery-orchestrator` agent | drive in main chat | switch to the `delivery-orchestrator` mode |
 | Pipeline run state | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` |
 | Process docs | `process/`, `templates/` | same | same | same |
@@ -36,9 +37,12 @@ The roster assigns each agent a **posture**, not a fixed tool list. Translate th
 | Posture | Meaning | VS Code / Copilot ids | Claude Code tools | Roo Code groups |
 |---|---|---|---|---|
 | `R` | read-only | `read`, `search` | `Read, Grep, Glob` | `read` |
+| `R+route` | read-only + routing-only `agent` | `read`, `search`, `agent` | `Read, Grep, Glob, Task` | `read` |
 | `E` | edit | `read`, `search`, `edit` | `Read, Grep, Glob, Edit, Write` | `read, edit` |
 | `E+T` | edit + terminal | `read`, `search`, `edit`, `execute`, `todo` | `Read, Grep, Glob, Edit, Write, Bash, TodoWrite` | `read, edit, command` |
-| `O` | orchestration | `agent` (+ `read`) | `Task` (+ `Read`) — **must run as the main loop on Claude Code** | `read` (Roo switches modes natively) |
+| `O` | orchestration | `read`, `search`, `agent`, `todo` | `Read, Grep, Glob, Task, TodoWrite` — **must run as the main loop on Claude Code** | `read` (Roo switches modes natively) |
+
+`R+route` and `O` each describe exactly one agent — the Code Reviewer (18) and the Delivery Orchestrator (01). They are separate postures because both carry the `agent` tool for different reasons and with different limits; see the legend in `process/agent-roster.md`. Tool ids within a definition are written in the canonical order `read`, `search`, `web`, `edit`, `execute`, `agent`, `todo`, and the converters preserve that order in their output.
 
 The converter applies this id→name map automatically:
 
@@ -56,10 +60,10 @@ Roo Code:     read/search → read   |   edit → edit   |   execute → command
 ### Claude Code
 
 1. Run `scripts/install.sh --target claude`. By default it installs **globally** to `~/.claude` (available in every project); add `--scope project --path <dir>` to install into one project's `.claude/` instead. It:
-   - reads every `.github/agents/*.agent.md` (skipping the `test` scaffold),
+   - reads every `.github/agents/*.agent.md`,
    - writes `agents/<name>.md` with the `tools:` line rewritten to Claude tool names and `argument-hint` dropped,
-   - ensures the skills exist under `skills/`,
-   - copies the `run-delivery` driver into `commands/`.
+   - syncs the skills from `.github/skills/` into `skills/`,
+   - syncs the commands from `.github/commands/` into `commands/`.
 2. For a **global** install nothing needs copying. For a **project** install, also copy `process/`, `templates/`, and (when you start) `runs/` into that project.
 3. Start a run with **`/run-delivery <run-id>`**. This is the key step: it makes your **main Claude session act as the Delivery Orchestrator**, because a Claude subagent cannot invoke other subagents — only the main loop can `Task`-dispatch the roster.
 4. Direct human use of any single agent works via the picker / `Task` with `mode: standalone`, a bounded task, and a target; no run ID or handoff is required.
@@ -114,4 +118,16 @@ Full semantics: [`process/agent-handoff-protocol.md`](process/agent-handoff-prot
 
 ## Keeping copies in sync
 
-`.github/agents/` is the **source of truth**. After editing an agent there, re-run `scripts/install.sh --target claude` (and `--target cursor` / `--target agents`) to regenerate the derived folders. Skills are mirrored in `.github/skills/` and `.claude/skills/`; edit one and copy to the other (they are kept byte-identical). Do not hand-edit the generated `.claude/agents/` or `.agents/` files — your changes will be overwritten on the next conversion.
+**`.github/` is the source of truth** — `agents/`, `skills/`, and `commands/`. Everything else is derived.
+
+After editing anything under `.github/`, run one command:
+
+```bash
+scripts/install.sh --target repo
+```
+
+`repo` regenerates every derived directory this repository tracks — the plugin components (`agents/`, `skills/`, `commands/`), `.claude/`, and `.cursor/rules/` — in a single pass. It is idempotent: a second run reports `0 written`. Use `--dry-run` first to see what would change without writing anything.
+
+Do not hand-edit a derived file. The installer overwrites `agents/`, `.claude/`, and `.cursor/` unconditionally, and it overwrites skills and commands too (pass `--keep-existing` if you have deliberately customised a destination copy). If you rename or delete an agent, the installer reports the leftover derived file as an `ORPHAN` rather than deleting it for you — remove it by hand.
+
+The per-platform targets (`--target claude|cursor|copilot|agents`) install *outward*, to `$HOME` or to another project. `--target repo` and `--target plugin` write only into this repository and reject `--path`.

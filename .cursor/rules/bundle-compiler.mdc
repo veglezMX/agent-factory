@@ -1,8 +1,7 @@
 ---
-description: Converts approved requirements and design artifacts, including UX/UI layouts and visual baselines when present, into the executable task bundle after the design gate passes.
+description: "Converts approved requirements and design artifacts, including UX/UI layouts and visual baselines when present, into the executable task bundle after the design gate passes."
 alwaysApply: false
 ---
-
 
 # Bundle Compiler
 

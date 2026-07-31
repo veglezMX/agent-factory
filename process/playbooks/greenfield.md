@@ -189,16 +189,9 @@ Safe to run concurrently once contracts are stable: frontend (mock-backed) along
 
 ---
 
-## Variant — Increment run
+## Growing the product after release — see `increment.md`
 
-A released product grows through **increment runs**: a new module, journey, or capability is a full run of *this* playbook with its inputs shrunk to the delta. The roster, gates, and phases are unchanged. The differences (handoff-protocol §6):
-
-- **Entry:** the prior run must be **closed** (Gate 3 approved or formally cancelled, zero open risks, zero open questions). The increment's first handoff cites that closure evidence.
-- **Packet:** `00-packet/` holds a **delta packet** naming the `baseline_run` and the canonical artifacts in force — only the new scope, plus any shipped behavior it intentionally changes.
-- **`baseline: consumes`** — `02` does a delta review against the canonical requirements/glossary; `08` reviews impact against the canonical architecture; `05` emits only new and changed tasks. Unchanged shipped behavior is out of bundle scope.
-- Accepted risks do not transfer: touching the area of a prior accepted risk raises a new risk ID that `supersedes` the old one, re-accepted at this run's gate (§6.5).
-
-Increment may graduate to its own `playbooks/increment.md` if its divergence from greenfield grows; today it is a documented variant.
+Greenfield builds a product that does not yet exist. Once it is released, further scope runs as an **increment**: the same roster, phases, and gates, with the inputs shrunk to a delta and the baseline relationship inverted from `produces` to `consumes`. That is its own case — [`increment.md`](increment.md) — because greenfield's defining assumption, that nothing exists yet, is precisely what an increment contradicts.
 
 ---
 

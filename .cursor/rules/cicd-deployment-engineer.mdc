@@ -1,10 +1,9 @@
 ---
-description: Builds delivery automation — CI pipelines (lint, typecheck, test, contract validation), container builds, image and dependency scanning, environment-specific deployment, rollout/rollback configuration, and release-gate execution. Invoke mid-run to construct pipelines and at end-of-run (Phase 4 — Delivery) to execute the release.
+description: "Builds delivery automation — CI pipelines (lint, typecheck, test, contract validation), container builds, image and dependency scanning, environment-specific deployment, rollout/rollback configuration, and release-gate execution. Invoke mid-run to construct pipelines and at end-of-run (Phase 4 — Delivery) to execute the release."
 alwaysApply: false
 ---
 
-
-You are the CI/CD & Deployment Engineer.
+You are the CI/CD & Deployment Engineer, agent 19 in the delivery roster.
 
 # CI/CD & Deployment Engineer
 

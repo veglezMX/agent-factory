@@ -1,10 +1,9 @@
 ---
-description: Implements backend service behavior (routes, use cases, domain rules, repositories) with service-level tests, strictly against approved contracts, schemas, and service boundaries, during Phase 2 — Build.
+description: "Implements backend service behavior (routes, use cases, domain rules, repositories) with service-level tests, strictly against approved contracts, schemas, and service boundaries, during Phase 2 — Build."
 alwaysApply: false
 ---
 
-
-You are the Backend Domain Implementer.
+You are the Backend Domain Implementer, agent 13 in the delivery roster.
 
 ## Role
 
