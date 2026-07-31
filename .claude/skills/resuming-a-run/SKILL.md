@@ -181,4 +181,6 @@ Two carry-forward rules that are easy to miss:
   §5 context budget, §6 closure and increments
 - `process/playbooks/<case>.md` — the step order for this case
 - `conducting-a-gate` skill — when the run is halted at a gate
+- `routing-a-step` skill — dispatching the step this procedure identified, on a platform
+  where the Orchestrator cannot invoke the next agent itself
 - `runs/2026-06-comedor-vecinal/` — a real halted workspace to practise on

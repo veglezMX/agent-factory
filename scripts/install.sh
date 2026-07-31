@@ -21,10 +21,11 @@ TARGET="claude"
 SCOPE=""
 DEST=""
 DRY_RUN=false
+CHECK=false
 KEEP_EXISTING=false
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-VALID_TARGETS="claude cursor copilot agents roo zoo plugin repo"
+VALID_TARGETS="claude cursor copilot codex hermes agents roo zoo plugin repo"
 VALID_SCOPES="global project"
 
 usage() {
@@ -36,21 +37,29 @@ Usage:
   scripts/install.sh --target claude --scope project --path DIR # project -> DIR/.claude
   scripts/install.sh --target cursor                            # global  -> ~/.cursor/rules
   scripts/install.sh --target copilot                           # global  -> ~/.copilot (agents+skills)
+  scripts/install.sh --target codex                             # global  -> ~/.codex/skills (agents shipped as skills)
+  scripts/install.sh --target hermes                            # global  -> ~/.hermes/skills (agents shipped as skills)
   scripts/install.sh --target agents                            # global  -> ~/.agents (generic per-agent custom-mode files)
   scripts/install.sh --target roo                               # global  -> Zoo/Roo custom_modes.yaml (editor globalStorage)
   scripts/install.sh --target roo --scope project --path DIR    # project -> DIR/.roomodes (native single-file format)
   scripts/install.sh --target plugin                            # regenerate this repo's plugin dirs
   scripts/install.sh --target repo                              # regenerate EVERY derived dir in this repo
   scripts/install.sh --target repo --dry-run                    # show what would change; write nothing
+  scripts/install.sh --target repo --check                      # CI gate: exit 1 if anything is stale
 
 Flags:
-  --target  claude | cursor | copilot | agents | roo | zoo | plugin | repo   (default: claude)
+  --target  claude | cursor | copilot | codex | hermes | agents | roo | zoo | plugin | repo
+            (default: claude)
             ('roo' and 'zoo' are aliases — same .roomodes / custom_modes.yaml format;
              global installs auto-detect Zoo Code and legacy Roo Code storage)
+            ('codex' and 'hermes' have no per-agent definition format: each agent is
+             shipped AS a skill, with its tool posture carried as prose)
   --scope   global | project                                     (default: global)
   --path    DIR    project root (required when --scope project)
   --dest    DIR    alias for "--scope project --path DIR" (back-compat)
   --dry-run        report what would be created/updated; make no changes
+  --check          --dry-run plus a non-zero exit when anything is stale, orphaned,
+                   or warned about. For CI: `scripts/install.sh --target repo --check`
   --keep-existing  never overwrite a skill or command already at the destination
   -h, --help       this message
 
@@ -78,6 +87,7 @@ while [[ $# -gt 0 ]]; do
     --path)    need_arg --path   "${2:-}"; DEST="$2";   shift 2 ;;
     --dest)    need_arg --dest   "${2:-}"; DEST="$2"; SCOPE="${SCOPE:-project}"; shift 2 ;;
     --dry-run) DRY_RUN=true; shift ;;
+    --check)   DRY_RUN=true; CHECK=true; shift ;;
     --keep-existing) KEEP_EXISTING=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown argument: $1" >&2; usage >&2; exit 1 ;;
@@ -148,13 +158,22 @@ emit() {
   WROTE=$((WROTE+1))
 }
 
-# report_orphans <dir> <suffix> — derived files with no corresponding source agent.
+# report_orphans <dir> <suffix> — derived files with no corresponding source.
+# A "skill-" prefix marks a skill rule (Cursor), so it is checked against .github/skills;
+# everything else is checked against .github/agents.
 report_orphans() {
   local dir="$1" suffix="$2" f base
   [[ -d "$dir" ]] || return 0
   for f in "$dir"/*"$suffix"; do
     [[ -e "$f" ]] || continue
     base="$(basename "$f" "$suffix")"
+    if [[ "$base" == skill-* ]]; then
+      if [[ ! -d "$SKILLS_SRC/${base#skill-}" ]]; then
+        echo "  ORPHAN: $f has no source in .github/skills (rename or delete it)"
+        ORPHANS=$((ORPHANS+1))
+      fi
+      continue
+    fi
     if [[ ! -f "$AGENTS_SRC/$base.agent.md" ]]; then
       echo "  ORPHAN: $f has no source in .github/agents (rename or delete it)"
       ORPHANS=$((ORPHANS+1))
@@ -207,6 +226,64 @@ claude_tools_line() {
 # Extract a frontmatter field value (first match) from a file: field_value <file> <key>
 field_value() { grep -m1 "^$2:" "$1" | sed "s/^$2:[[:space:]]*//"; }
 
+# --- Tool posture as prose -----------------------------------------------------
+# Several targets cannot carry a tool grant at all (Cursor rules, Codex and Hermes
+# skills). There the posture survives only as an instruction, so it must at least be
+# stated — an unstated posture is the one that gets violated.
+
+# posture_code <raw tools: line> — collapse the tool ids to the roster posture letter.
+# Matches the legend in process/agent-roster.md: R, R+route, E, E+T, O.
+posture_code() {
+  local id has_edit=0 has_exec=0 has_agent=0 has_todo=0
+  for id in $(tool_ids "$1"); do
+    case "$id" in
+      edit)    has_edit=1 ;;
+      execute) has_exec=1 ;;
+      agent)   has_agent=1 ;;
+      todo)    has_todo=1 ;;
+    esac
+  done
+  if   [[ $has_agent -eq 1 && $has_todo -eq 1 ]]; then echo "O"
+  elif [[ $has_agent -eq 1 ]];                   then echo "R+route"
+  elif [[ $has_exec  -eq 1 ]];                   then echo "E+T"
+  elif [[ $has_edit  -eq 1 ]];                   then echo "E"
+  else                                                echo "R"
+  fi
+}
+
+posture_note() { # posture_note <code>
+  case "$1" in
+    R)       echo "Read and search only. Never edit a file, never run a command." ;;
+    R+route) echo "Read and search only, plus recommending or routing to another agent. Never edit a file, never run a command." ;;
+    E)       echo "Read, search, and edit files inside your ownership boundary — as narrowed by the Scope & Boundaries section below, which is the binding limit. Never run shell commands." ;;
+    E+T)     echo "Read, search, edit inside your ownership boundary — as narrowed by the Scope & Boundaries section below, which is the binding limit — and run commands. Destructive or irreversible commands still need explicit human approval." ;;
+    O)       echo "Read, search, track tasks, and dispatch other agents. Never edit product files yourself." ;;
+  esac
+}
+
+posture_enforcement() { # posture_enforcement <platform> <code>
+  case "$1" in
+    codex)
+      case "$2" in
+        R|R+route) echo 'Codex grants tools per session, not per skill — run read-only work with `codex --sandbox read-only`.' ;;
+        *)         echo 'Codex grants tools per session, not per skill — `--sandbox workspace-write --ask-for-approval on-request` matches this posture; the boundary above is yours to hold.' ;;
+      esac
+      ;;
+    hermes)
+      case "$2" in
+        R|R+route) echo 'Hermes grants toolsets per session, not per skill — run read-only work with `hermes --safe-mode`.' ;;
+        *)         echo 'Hermes grants toolsets per session, not per skill — the ownership boundary above is yours to hold; approve destructive commands explicitly.' ;;
+      esac
+      ;;
+    cursor)
+      case "$2" in
+        R|R+route) echo 'Cursor rules carry no tool grant — this posture is an instruction, not a sandbox. Keep the model read-only by reviewing, not applying, its proposed edits.' ;;
+        *)         echo 'Cursor rules carry no tool grant — this posture is an instruction, not a sandbox. The ownership boundary above is what keeps the edits in scope.' ;;
+      esac
+      ;;
+  esac
+}
+
 # --- Skills and commands (verbatim copies, overwrite by default) ---------------
 install_skills() {
   local skills_dir="$1" s name dst
@@ -235,6 +312,69 @@ install_skills() {
     fi
     cp -R "$s" "$dst"; WROTE=$((WROTE+1)); echo "  skill '$name' -> $dst"
   done
+}
+
+# A skill is just Markdown, so a platform with no skills runtime can still use one —
+# provided something tells the model the skill exists. These two helpers are that
+# something: an index for file-loading harnesses, and native rules for Cursor.
+
+# write_skills_index <skills_dir> <how-to-invoke sentence>
+write_skills_index() {
+  local dir="$1" howto="$2" s name desc content
+  [[ -d "$SKILLS_SRC" ]] || return 0
+  content="$(
+    echo "# Skills index"
+    echo
+    echo "Generated by \`scripts/install.sh\` from \`.github/skills/\` — do not edit."
+    echo
+    echo "This platform has no skills runtime. $howto"
+    echo
+    echo "| Skill | Use it when | Path |"
+    echo "|---|---|---|"
+    for s in "$SKILLS_SRC"/*/; do
+      [[ -d "$s" ]] || continue
+      name="$(basename "$s")"
+      desc="$(field_value "$s/SKILL.md" description)"
+      desc="${desc%\"}"; desc="${desc#\"}"
+      printf '| `%s` | %s | `%s/SKILL.md` |\n' "$name" "${desc//|/\\|}" "$name"
+    done
+  )"
+  emit "$dir/SKILLS-INDEX.md" "$content"
+}
+
+# gen_skill_rules <out_rules_dir> — each skill as a Cursor rule, so it is @-mentionable
+# the way the agents are. Companion reference files stay on disk under .cursor/skills/.
+gen_skill_rules() {
+  local out_dir="$1" s name desc extras content count=0
+  [[ -d "$SKILLS_SRC" ]] || return 0
+  for s in "$SKILLS_SRC"/*/; do
+    [[ -d "$s" ]] || continue
+    name="$(basename "$s")"
+    desc="$(field_value "$s/SKILL.md" description)"
+    desc="${desc%\"}"; desc="${desc#\"}"
+    extras="$(cd "$s" && ls | grep -v '^SKILL.md$' || true)"
+    content="$(
+      echo "---"
+      printf 'description: "%s"\n' "${desc//\"/\\\"}"
+      echo "alwaysApply: false"
+      echo "---"
+      echo
+      awk 'BEGIN{fm=0;started=0}
+           /^---[[:space:]]*$/{fm++; next}
+           fm>=2{ if(!started){ if($0 ~ /^[[:space:]]*$/) next; started=1 } print }' "$s/SKILL.md"
+      if [[ -n "$extras" ]]; then
+        echo
+        echo "---"
+        echo
+        echo "Companion files for this skill (read them when the steps above reference them):"
+        echo
+        printf '%s\n' "$extras" | sed "s|^|- \`.cursor/skills/$name/|; s|$|\`|"
+      fi
+    )"
+    emit "$out_dir/skill-$name.mdc" "$content"
+    count=$((count+1))
+  done
+  echo "  $count skills -> $out_dir/skill-*.mdc (@-mentionable)"
 }
 
 install_commands() {
@@ -308,18 +448,28 @@ convert_plugin() {
 
 convert_cursor() {
   local out_dir="$DEST/.cursor/rules"
-  local count=0 src base dest desc content
+  local count=0 src base dest desc code content
   for src in "$AGENTS_SRC"/*.agent.md; do
     [[ -e "$src" ]] || continue
     base="$(basename "$src" .agent.md)"
     dest="$out_dir/$base.mdc"
     desc="$(field_value "$src" description)"
     desc="${desc%\"}"; desc="${desc#\"}"
+    code="$(posture_code "$(grep -m1 '^tools:' "$src" || true)")"
     content="$(
       echo "---"
       # quoted so a description containing ': ' cannot produce invalid YAML
       printf 'description: "%s"\n' "${desc//\"/\\\"}"
       echo "alwaysApply: false"
+      echo "---"
+      echo
+      # A Cursor rule has no tools field, so the posture would be lost entirely.
+      echo "## Tool posture — \`$code\`"
+      echo
+      echo "$(posture_note "$code")"
+      echo
+      echo "$(posture_enforcement cursor "$code")"
+      echo
       echo "---"
       # body only (everything after the closing frontmatter ---)
       awk 'BEGIN{fm=0;started=0}
@@ -330,8 +480,11 @@ convert_cursor() {
     count=$((count+1))
   done
   echo "  $count agents -> $out_dir/ (@-mention a rule to use it)"
+  gen_skill_rules "$out_dir"
+  install_skills "$DEST/.cursor/skills"
   report_orphans "$out_dir" ".mdc"
-  echo "Note: Cursor has no native orchestrator — drive the run manually in chat (see PORTABILITY.md)."
+  echo "Note: Cursor has no native orchestrator — drive the run manually in chat, or use the"
+  echo "      'routing-a-step' skill rule as the router (see PORTABILITY.md)."
 }
 
 # GitHub Copilot CLI: the agents are already in the native *.agent.md format, so we COPY
@@ -363,6 +516,138 @@ convert_copilot() {
   echo "Done. Start a run by invoking the 'delivery-orchestrator' agent with the packet."
   echo "Note: global installs target the Copilot CLI personal dir (override with COPILOT_HOME)."
   echo "See PORTABILITY.md for the agent-to-agent invocation caveat."
+}
+
+# --- Skill-shaped targets (Codex, Hermes) --------------------------------------
+# Neither platform has a per-agent definition format: both discover SKILL.md folders
+# and grant tools per SESSION, not per agent. So each agent ships AS a skill, and the
+# posture — which the frontmatter cannot carry, let alone enforce — is written into the
+# body as prose plus the platform flag that actually enforces it.
+
+# Marker line stamped into every generated agent-skill. It is what tells a later run
+# which skill folders this script owns (so orphans can be reported without touching
+# the framework skills that live in the same directory).
+AGENT_SKILL_MARKER="<!-- agents-factory: generated agent skill; source .github/agents/"
+
+# Convert .github/agents/*.agent.md into <out_dir>/<name>/SKILL.md.
+gen_agents_as_skills() { # gen_agents_as_skills <out_skills_dir> <codex|hermes>
+  local out_dir="$1" platform="$2"
+  local count=0 src base slug desc hint code content
+  for src in "$AGENTS_SRC"/*.agent.md; do
+    [[ -e "$src" ]] || continue
+    base="$(basename "$src" .agent.md)"
+    slug="$(field_value "$src" name)"; [[ -n "$slug" ]] || slug="$base"
+    desc="$(field_value "$src" description)"; desc="${desc%\"}"; desc="${desc#\"}"
+    hint="$(field_value "$src" argument-hint)"; hint="${hint%\"}"; hint="${hint#\"}"
+    code="$(posture_code "$(grep -m1 '^tools:' "$src" || true)")"
+    content="$(
+      echo "---"
+      echo "name: $slug"
+      # quoted so a description containing ': ' cannot produce invalid YAML
+      printf 'description: "%s"\n' "${desc//\"/\\\"}"
+      if [[ "$platform" == "hermes" ]]; then
+        echo "metadata:"
+        echo "  hermes:"
+        echo "    tags: [agents-factory, delivery-roster, $slug]"
+      fi
+      echo "---"
+      echo
+      echo "${AGENT_SKILL_MARKER}${base}.agent.md — do not edit here, edit the source and re-run scripts/install.sh -->"
+      echo
+      echo "## Tool posture — \`$code\`"
+      echo
+      echo "$(posture_note "$code")"
+      echo
+      echo "$(posture_enforcement "$platform" "$code")"
+      echo
+      echo "## Invocation"
+      echo
+      echo "Standalone (one bounded task, no run): supply \`task\` and \`target\`."
+      echo "Pipeline (governed run): supply \`run_id\` and the inbound handoff."
+      echo "Full semantics: \`process/agent-invocation-contract.md\`."
+      if [[ -n "$hint" ]]; then
+        echo
+        echo "Expected inputs: $hint"
+      fi
+      echo
+      echo "---"
+      # body only (everything after the closing frontmatter ---)
+      awk 'BEGIN{fm=0;started=0}
+           /^---[[:space:]]*$/{fm++; next}
+           fm>=2{ if(!started){ if($0 ~ /^[[:space:]]*$/) next; started=1; print "" } print }' "$src"
+    )"
+    emit "$out_dir/$slug/SKILL.md" "$content"
+    count=$((count+1))
+  done
+  echo "  $count agents -> $out_dir/<name>/SKILL.md"
+  report_orphan_agent_skills "$out_dir"
+}
+
+# Agent-skills and framework skills share one directory, so orphan detection keys off
+# the generated marker rather than off the folder name.
+report_orphan_agent_skills() {
+  local dir="$1" d base
+  [[ -d "$dir" ]] || return 0
+  for d in "$dir"/*/; do
+    [[ -f "$d/SKILL.md" ]] || continue
+    grep -qF "$AGENT_SKILL_MARKER" "$d/SKILL.md" || continue
+    base="$(basename "$d")"
+    if [[ ! -f "$AGENTS_SRC/$base.agent.md" ]]; then
+      echo "  ORPHAN: ${d}SKILL.md has no source in .github/agents (rename or delete it)"
+      ORPHANS=$((ORPHANS+1))
+    fi
+  done
+}
+
+# A framework skill and an agent would collide if they ever shared a name — both land
+# in the same skills dir. Report it rather than let one silently overwrite the other.
+warn_skill_name_collisions() {
+  local s name
+  [[ -d "$SKILLS_SRC" ]] || return 0
+  for s in "$SKILLS_SRC"/*/; do
+    [[ -d "$s" ]] || continue
+    name="$(basename "$s")"
+    [[ -f "$AGENTS_SRC/$name.agent.md" ]] \
+      && warn "skill '$name' collides with agent '$name' — one would overwrite the other."
+  done
+  return 0
+}
+
+# OpenAI Codex CLI: no agent format, but a native skills runtime that auto-discovers
+# $CODEX_HOME/skills/<name>/SKILL.md (project-level: <path>/.codex/skills).
+convert_codex() {
+  local base
+  if [[ "$SCOPE" == "global" ]]; then
+    base="${CODEX_HOME:-$HOME/.codex}"
+  else
+    base="$DEST/.codex"
+  fi
+  warn_skill_name_collisions
+  gen_agents_as_skills "$base/skills" codex
+  install_skills "$base/skills"
+  echo "Done. Codex auto-discovers $base/skills — ask for an agent by name, e.g. 'use the ux-flow-designer skill'."
+  echo "Note: Codex has no agent-to-agent dispatch. Drive a run yourself in playbook order,"
+  echo "      or use the delivery-orchestrator skill as the router and paste each handoff. See PORTABILITY.md."
+}
+
+# Hermes Agent (Nous Research): same shape — no file-based agent roster, but a native
+# skills runtime rooted at $HERMES_HOME/skills/<name>/SKILL.md.
+convert_hermes() {
+  local base
+  if [[ "$SCOPE" == "global" ]]; then
+    base="${HERMES_HOME:-$HOME/.hermes}"
+  else
+    base="$DEST/.hermes"
+  fi
+  warn_skill_name_collisions
+  gen_agents_as_skills "$base/skills" hermes
+  install_skills "$base/skills"
+  echo "Done. Hermes discovers $base/skills — check with 'hermes skills list'."
+  if [[ "$SCOPE" != "global" ]]; then
+    echo "Note: Hermes resolves skills from HERMES_HOME — run with HERMES_HOME=$base."
+  fi
+  echo "Note: Hermes spawns subagents by prompt, not from a roster file. The orchestrator can"
+  echo "      delegate by naming the agent skill in the subagent's prompt. See PORTABILITY.md."
 }
 
 # --- Generic ".agents" target (Roo Code custom-mode format) --------------------
@@ -448,6 +733,8 @@ gen_agents_roo() {
 convert_agents() {
   gen_agents_roo "$DEST/.agents"
   install_skills "$DEST/.agents/skills"
+  write_skills_index "$DEST/.agents/skills" \
+    "Read a skill's \`SKILL.md\` and follow it as written before starting the matching task."
   echo "Done. Point your harness at $DEST/.agents (one custom-mode YAML per agent)."
   echo "Note: Roo Code itself reads a single .roomodes (customModes: array) — use '--target roo'"
   echo "      for that native single-file layout. These per-agent files target generic"
@@ -584,6 +871,8 @@ install_roo_global() {
   fi
 
   install_skills "$HOME/.roo/skills"                        # no native skills runtime; staged for manual use
+  write_skills_index "$HOME/.roo/skills" \
+    "Read a skill's \`SKILL.md\` and follow it as written before starting the matching task."
   echo "Done. Reload your editor window — the modes appear globally in Zoo Code / Roo Code."
   echo "Switch to the 'delivery-orchestrator' mode to start a run."
   echo "Skills have no native Roo runtime — staged under ~/.roo/skills for manual invoke. See PORTABILITY.md."
@@ -596,6 +885,8 @@ convert_roo() {
   fi
   gen_roomodes "$DEST/.roomodes"
   install_skills "$DEST/.roo/skills"
+  write_skills_index "$DEST/.roo/skills" \
+    "Read a skill's \`SKILL.md\` and follow it as written before starting the matching task."
   echo "Done. Roo Code reads $DEST/.roomodes natively (top-level customModes: array)."
   echo "Start a run by switching to the 'delivery-orchestrator' mode and pointing it at the packet."
   echo "Skills have no native Roo runtime — installed under $DEST/.roo/skills for manual invoke. See PORTABILITY.md."
@@ -619,15 +910,24 @@ case "$TARGET" in
   claude)  convert_claude ;;
   cursor)  convert_cursor ;;
   copilot) convert_copilot ;;
+  codex)   convert_codex ;;
+  hermes)  convert_hermes ;;
   agents)  convert_agents ;;
   roo|zoo) convert_roo ;;
   plugin)  convert_plugin ;;
   repo)    convert_repo ;;
-  *) echo "unknown target: $TARGET (use claude | copilot | cursor | agents | roo | zoo | plugin | repo)" >&2; exit 1 ;;
+  *) echo "unknown target: $TARGET (use ${VALID_TARGETS// / | })" >&2; exit 1 ;;
 esac
 
 if $DRY_RUN; then
   echo "Summary: $WOULD would change, $UNCHANGED unchanged, $SKIPPED skipped, $ORPHANS orphaned, $WARNINGS warnings."
 else
   echo "Summary: $WROTE written, $UNCHANGED unchanged, $SKIPPED skipped, $ORPHANS orphaned, $WARNINGS warnings."
+fi
+
+# --check turns the report into a gate: a derived tree that is stale, orphaned, or
+# warned about fails the build instead of quietly drifting from .github/.
+if $CHECK && { [[ $WOULD -gt 0 ]] || [[ $ORPHANS -gt 0 ]] || [[ $WARNINGS -gt 0 ]]; }; then
+  echo "check FAILED: derived files are out of date with .github/ — run the same command without --check." >&2
+  exit 1
 fi

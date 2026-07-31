@@ -3,6 +3,14 @@ description: "Coordinates the full delivery workflow from Stakeholder Input Pack
 alwaysApply: false
 ---
 
+## Tool posture — `O`
+
+Read, search, track tasks, and dispatch other agents. Never edit product files yourself.
+
+Cursor rules carry no tool grant — this posture is an instruction, not a sandbox. The ownership boundary above is what keeps the edits in scope.
+
+---
+
 # Delivery Orchestrator
 
 ## Role

@@ -25,10 +25,10 @@ A run is driven by the **Delivery Orchestrator** (agent 01): it picks the next a
 
 ```text
 .github/agents/      29 agent definitions — Copilot/VS Code `.agent.md` format. SOURCE OF TRUTH.
-.github/skills/      5 skills (SKILL.md folders).                              SOURCE OF TRUTH.
+.github/skills/      6 skills (SKILL.md folders).                              SOURCE OF TRUTH.
 .github/commands/    run-delivery + run-advisory + run-status + new-agent.     SOURCE OF TRUTH.
 .claude/             Claude Code agents/skills/commands — GENERATED from .github
-.cursor/rules/       Cursor reference rules — GENERATED from .github
+.cursor/             Cursor rules (agents + skills) and skill companion files — GENERATED from .github
 .claude-plugin/      plugin.json + marketplace.json — the Claude Code marketplace plugin
 agents/ skills/ commands/   plugin component dirs (Claude Code format) — GENERATED from .github
 process/             the spine: roster, invocation contract, handoff protocol, playbooks/
@@ -42,7 +42,7 @@ CONTRIBUTING.md      the source-of-truth rule and how to add an agent, skill, pl
 **`.github/` is the source of truth** — agents, skills, and commands. Every other directory above marked GENERATED is derived from it. After editing anything under `.github/`, regenerate them all with one command:
 
 ```bash
-scripts/install.sh --target repo          # add --dry-run to preview
+scripts/install.sh --target repo          # add --dry-run to preview, --check to gate CI
 ```
 
 Don't hand-edit a generated file; the next regeneration overwrites it.
@@ -72,6 +72,12 @@ scripts/install.sh --target copilot   # add --scope project --path <dir> for a r
 scripts/install.sh --target roo --scope project --path /path/to/your/project   # -> <dir>/.roomodes (recommended)
 scripts/install.sh --target roo   # global -> custom_modes.yaml in the editor's globalStorage (Zoo/Roo, auto-detected)
 
+# OpenAI Codex CLI — each agent shipped as a skill -> ~/.codex/skills/ (honours $CODEX_HOME)
+scripts/install.sh --target codex     # add --scope project --path <dir> for a repo's .codex/skills
+
+# Hermes Agent (Nous) — each agent shipped as a skill -> ~/.hermes/skills/ (honours $HERMES_HOME)
+scripts/install.sh --target hermes    # add --scope project --path <dir> for a repo's .hermes/skills
+
 # Generic ".agents" harness — one custom-mode YAML per agent -> ~/.agents/
 scripts/install.sh --target agents    # add --scope project --path <dir> for one project
 
@@ -92,7 +98,7 @@ Use the `creating-stakeholder-packet` skill (it interviews you), or copy [`templ
 
 - **Claude Code:** `/run-delivery <run-id>` — the main session becomes the Delivery Orchestrator and drives the roster.
 - **Copilot / VS Code:** invoke the `delivery-orchestrator` agent and point it at the packet.
-- **Cursor / generic:** drive the orchestrator in your main chat; see PORTABILITY for the invocation caveat.
+- **Cursor / Codex / Hermes / generic:** drive the orchestrator in your main chat (Codex and Hermes: load the `delivery-orchestrator` skill); see PORTABILITY for the invocation caveat.
 
 The run pauses at each **human gate** (scope, design, release, …) until you sign the gate record — an intentional checkpoint where a human reviews and approves before work continues.
 
@@ -145,7 +151,7 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 
 - **29 agents** — see the [roster](process/agent-roster.md). Core 01–20 + expansion 21–29, including the standalone-friendly UI Layout Designer.
 - **10 cases** — see the [playbook index](process/playbooks/README.md): `greenfield`, `increment`, `brownfield-onboard`, `defect`, `incident`, `refactor`, `dependency-upgrade`, `spike`, `deprecation`, `data-operation`.
-- **5 skills** — `creating-stakeholder-packet` (author the packet by interview), `authoring-an-agent` and `authoring-a-playbook` (extend the framework without drifting from its conventions), `conducting-a-gate` (assemble evidence and write the gate record), `resuming-a-run` (reconstruct a run's state from disk alone).
+- **6 skills** — `creating-stakeholder-packet` (author the packet by interview), `authoring-an-agent` and `authoring-a-playbook` (extend the framework without drifting from its conventions), `conducting-a-gate` (assemble evidence and write the gate record), `resuming-a-run` (reconstruct a run's state from disk alone), `routing-a-step` (advance a run one step where the orchestrator cannot dispatch — you are the transport).
 - **4 commands** — `/run-delivery <run-id>` drives a governed run, `/run-advisory` chains read-only/review agents over an existing codebase, `/run-status <run-id>` reports where a run stands read-only, `/new-agent <slug>` scaffolds a conformant agent.
 - **Two ways to run** — a full **delivery run** (`/run-delivery`, builds & ships, state under `runs/`) and a lightweight **advisory review** (`/run-advisory`, read-only/review agents chained over an existing codebase, hand-offs as files under `agents-run/`). See [advisory-pipeline-usage.md](process/advisory-pipeline-usage.md) for when to use which.
 
@@ -153,7 +159,7 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 
 ## Limitations & prerequisites
 
-- **Orchestration model.** The framework assumes the orchestrator can invoke the other agents. On Claude Code, subagents cannot spawn subagents — so the orchestrator must run as the **main loop** (the `/run-delivery` driver does this). On Copilot/Cursor, agent-to-agent invocation is version-dependent; see PORTABILITY.
+- **Orchestration model.** The framework assumes the orchestrator can invoke the other agents. On Claude Code, subagents cannot spawn subagents — so the orchestrator must run as the **main loop** (the `/run-delivery` driver does this). On Copilot/Cursor, agent-to-agent invocation is version-dependent; Codex and Hermes have none at all. Where the harness cannot dispatch, the `routing-a-step` skill makes you the transport — run state was always on disk, so only the automation is lost. See PORTABILITY.
 - **`tools:` frontmatter is platform-specific.** The R / E / E+T / O **posture** is the portable contract; the literal tool names differ per platform. The converter rewrites them for Claude Code.
 - **Gates need a human.** Runs halt for sign-off by design; a stalled-looking run waiting at a gate is the framework working as intended, not a failure to recover from.
 - **`runs/` is the state store.** Keep it in the repo (or a sibling repo for pre-repo phases). Statelessness depends on it.

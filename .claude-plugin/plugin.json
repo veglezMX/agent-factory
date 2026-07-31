@@ -1,7 +1,7 @@
 {
   "name": "agents-factory",
   "version": "0.2.0",
-  "description": "Delivery framework with 29 independently invocable specialists plus a governed pipeline, five skills, and the run-delivery and run-status commands.",
+  "description": "Delivery framework with 29 independently invocable specialists plus a governed pipeline, six skills, and the run-delivery and run-status commands.",
   "author": {
     "name": "valentin",
     "email": "contact@veglez.com"

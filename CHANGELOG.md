@@ -9,6 +9,41 @@ Versions before `0.2.0` were not tagged; their entries are reconstructed from gi
 
 ## [Unreleased]
 
+### Added
+
+- **`scripts/install.sh --target codex`** — installs the roster into OpenAI Codex. Codex has
+  no agent format, only a skills runtime, so each agent ships as
+  `$CODEX_HOME/skills/<name>/SKILL.md` (default `~/.codex`; `--scope project` writes
+  `<dir>/.codex/skills`).
+- **`scripts/install.sh --target hermes`** — same shape for Hermes Agent (Nous Research):
+  `$HERMES_HOME/skills/<name>/SKILL.md`, with `metadata.hermes.tags` so the agents are
+  searchable next to the bundled skills.
+- **Tool-posture preamble in generated agent-skills.** Neither Codex nor Hermes grants tools
+  per agent, so each generated `SKILL.md` states its posture (`R`, `R+route`, `E`, `E+T`,
+  `O`), the rule in plain language, and the session flag that actually enforces it
+  (`codex --sandbox read-only`, `hermes --safe-mode`). The posture is derived from the
+  source agent's `tools:` line, so it cannot drift from the definition.
+- **`routing-a-step` skill** — advances a governed run one step on any platform where the
+  Delivery Orchestrator cannot dispatch the other agents (Cursor, Codex, Hermes, older
+  Copilot/Roo builds). Reads the run state, checks the gate, picks the next agent from the
+  playbook, writes the inbound handoff, and emits the paste-ready invocation per platform.
+  Requires a fresh session per step, so the protocol's context budget (§5) survives a
+  human-transported run. Skill count is now 6.
+- **`scripts/install.sh --check`** — `--dry-run` plus a non-zero exit when anything is stale,
+  orphaned, or warned about. `scripts/install.sh --target repo --check` is the CI gate for the
+  derived-directory contract, which until now was only enforceable by remembering to run it.
+- **Skills on platforms with no skills runtime.** Cursor gets each skill as an `@`-mentionable
+  `skill-<name>.mdc` rule, with companion reference files staged under `.cursor/skills/<name>/`;
+  the Roo/Zoo and generic `.agents` targets get a generated `SKILLS-INDEX.md` next to the staged
+  skills so the model can discover and load them.
+- **Tool posture in Cursor rules.** A `.mdc` rule has no tools field, so the posture used to be
+  dropped entirely on the one platform with no isolation either. Each generated rule now opens
+  with the same `## Tool posture` block as the Codex/Hermes skills.
+- **Orphan detection for skill-shaped targets.** Generated agent-skills carry a marker
+  comment, so a renamed or deleted agent is reported as an `ORPHAN` even though agent-skills
+  and framework skills share one directory. A name collision between a framework skill and
+  an agent is reported as a warning instead of silently overwriting.
+
 ## [0.2.0] — 2026-07-31
 
 The consolidation release: the derived-directory contract is now enforceable with one

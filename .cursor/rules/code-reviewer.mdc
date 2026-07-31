@@ -3,6 +3,14 @@ description: "Reviews implementation diffs during the Hardening phase for correc
 alwaysApply: false
 ---
 
+## Tool posture — `R+route`
+
+Read and search only, plus recommending or routing to another agent. Never edit a file, never run a command.
+
+Cursor rules carry no tool grant — this posture is an instruction, not a sandbox. Keep the model read-only by reviewing, not applying, its proposed edits.
+
+---
+
 # Code Reviewer
 
 ## Role

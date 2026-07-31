@@ -1,0 +1,18 @@
+name: derived dirs
+
+# .github/{agents,skills,commands} is the source of truth; every other component
+# directory is generated from it. This job fails a change that edits the source
+# without regenerating, which is the only way the contract is actually enforced.
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Derived directories are in sync with .github/
+        run: scripts/install.sh --target repo --check

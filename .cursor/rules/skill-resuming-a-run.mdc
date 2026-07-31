@@ -1,6 +1,6 @@
 ---
-name: resuming-a-run
-description: Use when picking up a delivery run whose context you do not have — a run halted at a gate, a run someone else started, a run from last month, or any cold session where the next step must be determined from disk rather than from chat history. Also use before opening a new run, to prove the previous one is actually closed. Operationalises the handoff protocol's statelessness property.
+description: "Use when picking up a delivery run whose context you do not have — a run halted at a gate, a run someone else started, a run from last month, or any cold session where the next step must be determined from disk rather than from chat history. Also use before opening a new run, to prove the previous one is actually closed. Operationalises the handoff protocol's statelessness property."
+alwaysApply: false
 ---
 
 # Resuming a Run
@@ -32,7 +32,6 @@ deficient — not a reason to reconstruct it from memory.
 **Do NOT use for:** `standalone` invocations. A bounded direct task needs no run workspace at
 all (`agent-invocation-contract.md` §4).
 
----
 
 ## Step 1 — Read `state.md` first
 
@@ -161,7 +160,6 @@ Two carry-forward rules that are easy to miss:
 - **Cancellation does not waive risk closure.** A cancelled run still needs every risk resolved
   or accepted by name before the record is signed.
 
----
 
 ## Common findings
 
