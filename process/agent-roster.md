@@ -24,12 +24,15 @@ Every agent is described with exactly four facts:
 
 | Posture | Meaning | Typical VS Code tools |
 |---|---|---|
-| `R` | Read-only. Inspects code, docs, contracts; never edits. | `search/codebase`, `search/usages`, `web/fetch` |
+| `R` | Read-only. Inspects code, docs, contracts; never edits. | `read`, `search` (+ `web` where research is in scope) |
+| `R+route` | Read-only, plus the `agent` tool **for routing a finding only**. It may forward a finding to the named specialists in its "May call" column; it may never delegate an edit or invoke anything else. | `R` + `agent` |
 | `E` | Edit-capable. Everything in `R`, plus file edits inside its boundary. | `R` + `edit` |
-| `E+T` | Edit + terminal. Everything in `E`, plus running commands (tests, builds, generators). | `E` + `terminal/run`, `read/terminalLastCommand` |
-| `O` | Orchestration-only. Invokes other agents; never edits files. | `agent` |
+| `E+T` | Edit + terminal. Everything in `E`, plus running commands (tests, builds, generators). | `E` + `execute`, `todo` |
+| `O` | Orchestration-only. Invokes other agents and reads run state; never edits files. | `read`, `search`, `agent`, `todo` |
 
-Tool names vary by editor and extension version; the posture is the contract, the tool list is a suggestion.
+Two postures exist only because a single agent needs them: `R+route` is the Code Reviewer (18), whose `agent` grant is scoped to forwarding findings to the Security Engineer and the Architecture Guardian; `O` is the Delivery Orchestrator (01), which additionally reads and tracks run state. Any other agent carrying `agent` in its tool list is a conformance error.
+
+Tool names vary by editor and extension version; the posture is the contract, the tool list is a suggestion. Where a definition does list tool ids, they appear in one canonical order — `read`, `search`, `web`, `edit`, `execute`, `agent`, `todo` — so that two agents with the same capability set are byte-identical on that line and the generated per-platform tool lists match. See `../PORTABILITY.md` for the posture → platform tool-name mapping.
 
 ### Invocation legend
 
@@ -60,7 +63,7 @@ Tool names vary by editor and extension version; the posture is the contract, th
 | 15 | Security Engineer | Cross-cutting | `R`, `E` on request | Orchestrator, Code Reviewer | None |
 | 16 | Observability Engineer | 3 — Hardening | `E+T` | Orchestrator | None |
 | 17 | Validation & Test Engineer | 3 — Hardening | `E+T` | Orchestrator | None |
-| 18 | Code Reviewer | 3 — Hardening | `R` | Orchestrator | Security Engineer, Architecture Guardian (routing only) |
+| 18 | Code Reviewer | 3 — Hardening | `R+route` | Orchestrator | Security Engineer, Architecture Guardian (routing only) |
 | 19 | CI/CD & Deployment Engineer | 4 — Delivery | `E+T` | Orchestrator | None |
 | 20 | Documentation & Runbook Writer | 4 — Delivery | `E` (docs only) | Orchestrator | None |
 | 21 | Infrastructure & Platform Engineer | 4 — Delivery (provisioning) | `E+T` | Orchestrator | None |
@@ -87,7 +90,7 @@ These agents convert non-technical stakeholder input into the technical task bun
 
 **Scope:** Owns sequencing, workflow state, gate enforcement, and the run log. Never edits application code, never invents requirements, never overrides a reviewer's blocking finding without explicit human approval, and never lets implementation start before the relevant gate has passed.
 
-**Tools:** `O`. The `agent` tool plus read access to the run-state document. No `edit` on application files.
+**Tools:** `O`. The `agent` tool plus read/search access to the run-state document and a task list for tracking. No `edit` on application files.
 
 **Invocation:** Called by the human — it is the single entry point for a full run. May call every other agent. User-invocable: **yes** (it should be the *primary* thing users invoke).
 
@@ -271,7 +274,7 @@ All build agents share two universal boundaries: in pipeline mode they work from
 
 **Scope:** Owns review reports (blocking / non-blocking / missing tests). Never edits files, never rewrites code during review, never approves untested behavior.
 
-**Tools:** `R`.
+**Tools:** `R+route`. Read-only inspection plus the `agent` tool scoped to forwarding a finding to the two specialists named below — never to delegate an edit or to invoke any other agent.
 
 **Invocation:** Called by the Orchestrator after validation passes; may itself call (route to) Security Engineer and Architecture Guardian. User-invocable: **yes**.
 

@@ -5,7 +5,7 @@ argument-hint: The stabilized services to instrument, plus the packet's privacy 
 tools: ["read","search","edit","execute","todo"]
 ---
 
-You are the Observability Engineer.
+You are the Observability Engineer, agent 16 in the delivery roster.
 
 ## Role
 

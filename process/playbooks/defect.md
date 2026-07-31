@@ -6,7 +6,7 @@ entry_criteria:
   - prior run closed (Gate 3 approved or formally cancelled, zero open risks/questions — handoff-protocol §6.1)
   - the defect is reproducible (a known sequence of steps yields the wrong observed behavior)
   - canonical docs/ baseline exists to diff the expected behavior against (handoff-protocol §6.3)
-agents: [01,03,07,08,10,11,13,14,15,17,18,19,20,25]
+agents: [01,03,07,08,10,11,13,14,15,17,18,19,20,25,27]
 skills: []
 gates: [release]
 baseline: consumes
@@ -83,6 +83,8 @@ PHASE 3 — VERIFY  (the invariant)
   17-validation-test-engineer      reproducing test now GREEN; FULL regression suite green ↺ owning implementer on any red
   18-code-reviewer                 diff review: minimal, in-scope, no creep              ↺ 13/14 on blockers
   15-security-engineer (~)         re-check if the diff touched sensitive areas
+  27-accessibility-auditor (~)     only if the defect IS an accessibility defect, or the
+                                   fix changed rendered UI                               ↺ 14 on blockers
 
 PHASE 4 — DELIVER
   19-cicd-deployment-engineer      pipeline runs full suite; staging deploy smoke-checked
@@ -122,13 +124,14 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 10. **Validation & Test Engineer — verify the invariant (`17`).** Confirms the reproducing test is now **green** and runs the **full regression suite**, which must also be green — the invariant of this case. A green reproducing test with any other test red is not a fix; it is a regression. **↺** Any red routes to the owning implementer; verification restarts after the fix.
 11. **Code Reviewer (`18`).** Full-diff review with a defect-specific lens: the change is minimal, traces to the defect, and introduces **no scope creep**. Blocking findings **↺** to the owning implementer; security smells route to `15`, boundary smells to `08`. Re-review after fixes.
 12. **Security re-check (`15`, conditional).** A final pass **only if the diff touched sensitive areas**. High findings block release.
+13. **Accessibility Auditor (`27`, conditional).** Invoked **only when the defect itself is an accessibility defect** — the reported wrong behavior is a keyboard trap, an unannounced state, a contrast or reflow failure — **or when the fix changed rendered UI**. In the first case the reproducing test from `17` pins the expected accessible behavior and this agent confirms the fix restores it; in the second it checks the narrow question "did this diff regress focus order, announcement, or contrast on the touched surface?", not the screen's overall conformance. A broader audit of untouched UI is out of scope — that is an increment. **↺** Blocking findings return to `14`.
 
 ### Phase 4 — Deliver
 
-13. **CI/CD pipeline pass (`19`).** Runs the pipeline including the **full suite and the new reproducing test**, builds and scans the image, and smoke-checks a staging deploy with the fix in place. Migration job (if `11` produced one) wired before app rollout, with rollback.
-14. **Documentation & Runbook Writer (`20`, conditional).** Updates release notes and the known-limitations list to record the fix. **Skipped when the fix has no operator- or developer-visible change** beyond the corrected behavior itself.
-15. **Release readiness (`19`, second pass) + `[H]` release gate.** The CI/CD agent assembles release evidence (reproducing test committed and green, full regression suite green, security findings resolved or accepted, staging verified, rollback documented). Approver authorizes; CI/CD executes. Gate semantics: handoff-protocol §3.1 (release).
-16. **Orchestrator close-out (`01`).** Final delivery summary. Canonical `docs/` are promoted **only if the defect revealed a baseline that misdescribed correct behavior** — i.e. the doc, not just the code, was wrong (§6.3). A pure code fix that already matched the canonical baseline changes no docs; that is the normal case for `baseline: consumes`.
+14. **CI/CD pipeline pass (`19`).** Runs the pipeline including the **full suite and the new reproducing test**, builds and scans the image, and smoke-checks a staging deploy with the fix in place. Migration job (if `11` produced one) wired before app rollout, with rollback.
+15. **Documentation & Runbook Writer (`20`, conditional).** Updates release notes and the known-limitations list to record the fix. **Skipped when the fix has no operator- or developer-visible change** beyond the corrected behavior itself.
+16. **Release readiness (`19`, second pass) + `[H]` release gate.** The CI/CD agent assembles release evidence (reproducing test committed and green, full regression suite green, security findings resolved or accepted, staging verified, rollback documented). Approver authorizes; CI/CD executes. Gate semantics: handoff-protocol §3.1 (release).
+17. **Orchestrator close-out (`01`).** Final delivery summary. Canonical `docs/` are promoted **only if the defect revealed a baseline that misdescribed correct behavior** — i.e. the doc, not just the code, was wrong (§6.3). A pure code fix that already matched the canonical baseline changes no docs; that is the normal case for `baseline: consumes`.
 
 ---
 
@@ -144,6 +147,7 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 | Root cause is a schema / data-invariant defect | 13 | 11 |
 | Root cause is in prompt / model-mediated behavior | 13 / 17 | 25 |
 | Security defect or fix touches sensitive areas | 15 / 18 | Owning implementer (13 / 14) |
+| Accessibility defect, or the fix regressed a11y on the touched UI | 27 | 14 |
 | Review blocker (creep, missing test, risky change) | 18 | Owning implementer (13 / 14) |
 | Fix would change intended behavior, not restore it | Anyone | Human via Orchestrator (blocking → becomes an increment, not a defect) |
 | Anything untraceable to the canonical baseline | Anyone | Human via Orchestrator (blocking) |

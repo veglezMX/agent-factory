@@ -7,7 +7,7 @@ entry_criteria:
   - a thin packet exists under 00-packet/ naming the system, its owners, and what is known
   - no canonical docs/ baseline exists yet (nothing to diff against)
   - no prior run open (handoff-protocol §6.1)
-agents: [01,02,03,04,05,06,07,08,10,11,12,13,14,15,16,17,18,19,20,21,22,26]
+agents: [01,02,03,04,05,06,07,08,10,11,12,13,14,15,16,17,18,19,20,21,22,26,27,28]
 skills: [creating-stakeholder-packet]
 gates: [scope, design, release]
 baseline: produces
@@ -90,6 +90,8 @@ PHASE 2 — CHARACTERIZATION (reconstruct only what EXISTS — no new behavior)
 
 PHASE 3 — VALIDATION
   16-observability-engineer (~)    document existing signals/health surface (what IS emitted)
+  28-product-analytics-engineer(~) document existing product events/funnels (what IS tracked)
+  27-accessibility-auditor (~)     as-built a11y audit of the observed UI → findings, no fixes
   23 — NOT USED (no perf budget to establish on an as-built baseline)
   17-validation-test-engineer      run the characterization ladder: does the reconstructed baseline reproduce
                                    the system's actual behavior?                  ↺ 04/10/11 on doc-vs-code drift
@@ -142,18 +144,20 @@ This phase reverse-engineers and pins. Foundation Engineer (`09`) is **not used*
 ### Phase 3 — Validation
 
 17. **Observability Engineer (`16`, conditional).** Documents the signals the system *already* emits — existing logs, metrics, health surface — and the redaction (or lack of it) that is in place. It adds no instrumentation in this run; gaps are findings for the future increment. Skipped when there is nothing to document.
-18. **Performance & Load Engineer (`23`) — not used.** A brownfield baseline records what the system does, not a performance budget it should meet; there is no target to validate against. Performance characterization belongs to the later increment that introduces a budget.
-19. **Validation & Test Engineer (`17`).** Runs the characterization ladder: do the reconstructed contracts, schema, and tests faithfully reproduce the running system's behavior? A test that fails because the *doc* is wrong (not the code) is doc-vs-code drift and routes back to the producing agent (`↺ 04 / 10 / 11`); the reconstruction is corrected to match reality, the system is never changed to match the reconstruction.
-20. **Code Reviewer (`18`).** Reviews the reconstruction — the docs and the characterization tests — for **fidelity**, not for code quality of the foreign system. Blocking findings (a test that asserts behavior the system doesn't have, a contract that misdescribes an endpoint) `↺` to the producing agent. Architecture smells route to `08`, security smells to `15` — but only ever as recorded findings for the increment, never as in-run fixes.
+18. **Product Analytics & Instrumentation Engineer (`28`, conditional).** Documents the product instrumentation that **already exists** — the event taxonomy actually emitted, where it is sent, which funnels or KPIs are currently derived from it, and what personal data those events carry. Follows the same rule as `15` and `16`: record, do not improve. Untracked journeys and un-redacted event payloads are findings for the future increment, and an event carrying personal data the thin packet never disclosed is a code-vs-packet discrepancy routed to `26` and to the human. Skipped when the system emits no product analytics.
+19. **Accessibility Auditor (`27`, conditional).** Audits the UI **as it exists today** against the screen inventory from `03`, producing the as-built accessibility baseline: keyboard reachability, focus order, announced states, contrast, reflow. It fixes nothing — remediation is new behavior, which this case forbids. Findings are carried forward as named, accepted risks so the future increment inherits a known starting point rather than discovering it. Skipped for headless or API-only systems, exactly as `03` is.
+20. **Performance & Load Engineer (`23`) — not used.** A brownfield baseline records what the system does, not a performance budget it should meet; there is no target to validate against. Performance characterization belongs to the later increment that introduces a budget.
+21. **Validation & Test Engineer (`17`).** Runs the characterization ladder: do the reconstructed contracts, schema, and tests faithfully reproduce the running system's behavior? A test that fails because the *doc* is wrong (not the code) is doc-vs-code drift and routes back to the producing agent (`↺ 04 / 10 / 11`); the reconstruction is corrected to match reality, the system is never changed to match the reconstruction.
+22. **Code Reviewer (`18`).** Reviews the reconstruction — the docs and the characterization tests — for **fidelity**, not for code quality of the foreign system. Blocking findings (a test that asserts behavior the system doesn't have, a contract that misdescribes an endpoint) `↺` to the producing agent. Architecture smells route to `08`, security smells to `15` — but only ever as recorded findings for the increment, never as in-run fixes.
 
 ### Phase 4 — Baseline Promotion
 
 Delivery here promotes a *baseline*, not a deployment. Gate 3 is the **baseline-approval** variant (protocol §3.4): it certifies the reconstructed baseline, it does not authorize a release.
 
-21. **CI/CD & Deployment Engineer (`19`).** Wires the characterization suite into CI as the regression net so that the future increment can detect when it changes baseline behavior. It builds no new deploy path and ships nothing to production in this run.
-22. **Infrastructure & Platform Engineer (`21`, conditional).** Captures the system's as-built provisioning and runtime as baseline infrastructure documentation, so the increment has an accurate starting point. It provisions nothing new. Skipped when there is no infrastructure to capture.
-23. **Documentation & Runbook Writer (`20`).** Assembles the reconstructed baseline document set — requirements, glossary, architecture, contracts, data model, and the carried-forward findings/limitations list — strictly from observed behavior. This is the artifact Gate 3 signs.
-24. **Baseline approval (`[H]` GATE 3, §3.4) + Orchestrator close-out (`01`).** The approver signs off that the reconstructed baseline is accurate and complete (every discrepancy resolved, every characterization test green, zero open risks). The Orchestrator then promotes requirements, glossary, architecture, contracts, and data model into canonical `docs/` (§6.3). With a baseline now in force, the actual change runs as a **greenfield increment** against it.
+23. **CI/CD & Deployment Engineer (`19`).** Wires the characterization suite into CI as the regression net so that the future increment can detect when it changes baseline behavior. It builds no new deploy path and ships nothing to production in this run.
+24. **Infrastructure & Platform Engineer (`21`, conditional).** Captures the system's as-built provisioning and runtime as baseline infrastructure documentation, so the increment has an accurate starting point. It provisions nothing new. Skipped when there is no infrastructure to capture.
+25. **Documentation & Runbook Writer (`20`).** Assembles the reconstructed baseline document set — requirements, glossary, architecture, contracts, data model, and the carried-forward findings/limitations list (which now includes the accessibility and analytics findings from `27` and `28`) — strictly from observed behavior. This is the artifact Gate 3 signs.
+26. **Baseline approval (`[H]` GATE 3, §3.4) + Orchestrator close-out (`01`).** The approver signs off that the reconstructed baseline is accurate and complete (every discrepancy resolved, every characterization test green, zero open risks). The Orchestrator then promotes requirements, glossary, architecture, contracts, and data model into canonical `docs/` (§6.3). With a baseline now in force, the actual change runs as a **greenfield increment** against it.
 
 ---
 
@@ -165,6 +169,7 @@ Delivery here promotes a *baseline*, not a deployment. Gate 3 is the **baseline-
 | Reconstructed architecture does not match the code | 08 | 04 |
 | Reconstructed infra does not match the deploy definition | 22 | 04 |
 | Observed data flow contradicts the packet's privacy posture | 26 | Human via Orchestrator (blocking) |
+| Existing analytics event carries personal data the thin packet never disclosed | 28 | 26, then Human via Orchestrator (blocking) |
 | Bundle gap (observed behavior with no characterization task) | 06 | 05 |
 | Reconstructed contract misdescribes a live endpoint | 18 / 17 | 10 |
 | Reconstructed schema/invariant misdescribes the database | 18 / 17 | 11 |

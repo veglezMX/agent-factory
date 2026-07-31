@@ -14,7 +14,7 @@ It is **not** an app. It is a reusable set of agent definitions, skills, process
 |---|---|---|
 | **Packet** | The pipeline source of business truth — a structured, plain-language brief. Standalone calls instead use the direct task and selected local references. | [`templates/stakeholder-input-packet.md`](templates/stakeholder-input-packet.md) + the `creating-stakeholder-packet` skill |
 | **Roster** | 29 specialized agents (orchestrator, requirements, UX/UI design, build, hardening, delivery + expansion agents). Each has one job and hard boundaries. | [`process/agent-roster.md`](process/agent-roster.md) |
-| **Playbooks** | Per-**case** recipes — which agents run, in what order, with which gates. 9 cases (greenfield, defect, incident, refactor, …). | [`process/playbooks/`](process/playbooks/README.md) |
+| **Playbooks** | Per-**case** recipes — which agents run, in what order, with which gates. 10 cases (greenfield, increment, defect, incident, refactor, …). | [`process/playbooks/`](process/playbooks/README.md) |
 | **Invocation + handoff contracts** | How agents run independently or in a governed pipeline; payload format, run workspace, gates, escalation, and context budget. | [`process/agent-invocation-contract.md`](process/agent-invocation-contract.md) + [`process/agent-handoff-protocol.md`](process/agent-handoff-protocol.md) |
 
 A run is driven by the **Delivery Orchestrator** (agent 01): it picks the next agent per the playbook, carries context via append-only handoff files, halts at human **gates**, and records everything under `runs/<run-id>/` so any agent can be invoked cold and reconstruct state from disk alone.
@@ -25,10 +25,10 @@ A run is driven by the **Delivery Orchestrator** (agent 01): it picks the next a
 
 ```text
 .github/agents/      29 agent definitions — Copilot/VS Code `.agent.md` format. SOURCE OF TRUTH.
-.github/skills/      skills in Copilot/manual form
-.claude/skills/      the same skills, Claude Code layout
-.claude/agents/      Claude Code agents — GENERATED from .github/agents by scripts/install.sh
-.claude/commands/    run-delivery — the orchestrator driver for Claude Code
+.github/skills/      5 skills (SKILL.md folders).                              SOURCE OF TRUTH.
+.github/commands/    run-delivery + run-status + new-agent.                    SOURCE OF TRUTH.
+.claude/             Claude Code agents/skills/commands — GENERATED from .github
+.cursor/rules/       Cursor reference rules — GENERATED from .github
 .claude-plugin/      plugin.json + marketplace.json — the Claude Code marketplace plugin
 agents/ skills/ commands/   plugin component dirs (Claude Code format) — GENERATED from .github
 process/             the spine: roster, invocation contract, handoff protocol, playbooks/
@@ -36,9 +36,16 @@ templates/           the Stakeholder Input Packet template
 runs/                per-run workspaces — the live state store (packet, requirements, gates, handoffs)
 scripts/             install.sh — install/convert the roster for your platform
 PORTABILITY.md       per-platform setup, directory map, tool-posture mapping
+CONTRIBUTING.md      the source-of-truth rule and how to add an agent, skill, playbook, or case
 ```
 
-`.github/agents/` is the **source of truth**. Other platforms' agent folders are derived from it — regenerate them with `scripts/install.sh`, don't hand-edit, or they drift.
+**`.github/` is the source of truth** — agents, skills, and commands. Every other directory above marked GENERATED is derived from it. After editing anything under `.github/`, regenerate them all with one command:
+
+```bash
+scripts/install.sh --target repo          # add --dry-run to preview
+```
+
+Don't hand-edit a generated file; the next regeneration overwrites it.
 
 ---
 
@@ -64,8 +71,11 @@ scripts/install.sh --target copilot   # add --scope project --path <dir> for a r
 # Generic ".agents" harness — one Roo Code custom-mode YAML per agent -> ~/.agents/
 scripts/install.sh --target agents    # add --scope project --path <dir> for one project
 
-# Claude Code marketplace plugin — regenerates this repo's root agents/ skills/ commands/ (+ .claude-plugin/ manifests)
+# Claude Code marketplace plugin — regenerates this repo's root agents/ skills/ commands/
 scripts/install.sh --target plugin
+
+# …or regenerate EVERY derived dir in this repo at once (plugin + .claude/ + .cursor/)
+scripts/install.sh --target repo
 ```
 
 A global install needs nothing copied — every project picks up `~/.claude` (or `~/.cursor`) automatically. For a **project-scoped** install, also copy `process/` and `templates/` into that project. See [PORTABILITY.md](PORTABILITY.md) for exactly which folders each platform needs.
@@ -90,7 +100,7 @@ Invoke any specialist directly with `mode: standalone`, a bounded `task`, and a 
 
 ## Use as a Claude Code plugin (CLI & web)
 
-The roster also ships as a **Claude Code marketplace plugin** — the repo is both the plugin and a single-plugin marketplace (`.claude-plugin/plugin.json` + `marketplace.json`). Regenerate the bundled component dirs after editing any agent with `scripts/install.sh --target plugin`.
+The roster also ships as a **Claude Code marketplace plugin** — the repo is both the plugin and a single-plugin marketplace (`.claude-plugin/plugin.json` + `marketplace.json`). Regenerate the bundled component dirs after editing any agent with `scripts/install.sh --target repo`.
 
 **CLI** — add the marketplace, then install:
 
@@ -120,7 +130,9 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 ## What's covered
 
 - **29 agents** — see the [roster](process/agent-roster.md). Core 01–20 + expansion 21–29, including the standalone-friendly UI Layout Designer.
-- **9 cases** — see the [playbook index](process/playbooks/README.md): `greenfield` (+`increment`), `brownfield-onboard`, `defect`, `incident`, `refactor`, `dependency-upgrade`, `spike`, `deprecation`, `data-operation`.
+- **10 cases** — see the [playbook index](process/playbooks/README.md): `greenfield`, `increment`, `brownfield-onboard`, `defect`, `incident`, `refactor`, `dependency-upgrade`, `spike`, `deprecation`, `data-operation`.
+- **5 skills** — `creating-stakeholder-packet` (author the packet by interview), `authoring-an-agent` and `authoring-a-playbook` (extend the framework without drifting from its conventions), `conducting-a-gate` (assemble evidence and write the gate record), `resuming-a-run` (reconstruct a run's state from disk alone).
+- **3 commands** — `/run-delivery <run-id>` drives a governed run, `/run-status <run-id>` reports where one stands read-only, `/new-agent <slug>` scaffolds a conformant agent.
 
 ---
 
@@ -130,6 +142,7 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 - **`tools:` frontmatter is platform-specific.** The R / E / E+T / O **posture** is the portable contract; the literal tool names differ per platform. The converter rewrites them for Claude Code.
 - **Gates need a human.** Runs halt for sign-off by design; a stalled-looking run waiting at a gate is the framework working as intended, not a failure to recover from.
 - **`runs/` is the state store.** Keep it in the repo (or a sibling repo for pre-repo phases). Statelessness depends on it.
+- **This repo ships one real run workspace.** `runs/2026-06-comedor-vecinal/` is committed on purpose, as reference material for what a live run looks like on disk — it is the artifact the worked example links. It is also the largest non-agent payload here and it downloads with the plugin. Delete the directory if you install the roster into a project and want it gone; nothing depends on it at runtime. Note that it was executed against the 20-agent roster and does not conform to today's `greenfield` playbook — see the callout in [`process/examples/comedor-greenfield.md`](process/examples/comedor-greenfield.md).
 - **No language/stack is assumed.** Agents adapt to your stack via the packet and design; nothing here is tied to a framework.
 
 ---

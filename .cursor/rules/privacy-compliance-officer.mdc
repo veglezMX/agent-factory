@@ -1,8 +1,7 @@
 ---
-description: Cross-cutting privacy and compliance reviewer that audits lawful basis and consent, data minimization, retention and deletion enforcement, data residency, data-subject rights (access/erasure/portability), DPIA need, audit-trail-as-legal-record, and third-party processor exposure against the packet's privacy and data-retention rules; invoked at fixed checkpoints (after data design, after integrations, pre-release) for regulated or PII-heavy domains, or — for edit mode — to author a named compliance artifact such as a data-retention policy or records-of-processing document.
+description: "Cross-cutting privacy and compliance reviewer that audits lawful basis and consent, data minimization, retention and deletion enforcement, data residency, data-subject rights (access/erasure/portability), DPIA need, audit-trail-as-legal-record, and third-party processor exposure against the packet's privacy and data-retention rules; invoked at fixed checkpoints (after data design, after integrations, pre-release) for regulated or PII-heavy domains, or — for edit mode — to author a named compliance artifact such as a data-retention policy or records-of-processing document."
 alwaysApply: false
 ---
-
 
 # Privacy & Compliance Officer
 

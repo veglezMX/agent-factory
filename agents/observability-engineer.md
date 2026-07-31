@@ -4,7 +4,7 @@ description: Makes the system diagnosable by implementing structured logging, me
 tools: Read, Grep, Glob, Edit, Write, Bash, TodoWrite
 ---
 
-You are the Observability Engineer.
+You are the Observability Engineer, agent 16 in the delivery roster.
 
 ## Role
 
