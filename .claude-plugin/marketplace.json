@@ -8,7 +8,7 @@
     {
       "name": "agents-factory",
       "source": "./",
-      "description": "Star-shaped delivery pipeline: 28 specialist agents, the creating-stakeholder-packet skill, and the run-delivery command that turn a Stakeholder Input Packet into a deployed application."
+      "description": "Delivery framework with 29 independently invocable specialists plus a governed pipeline, five skills, and the run-delivery and run-status commands."
     }
   ]
 }

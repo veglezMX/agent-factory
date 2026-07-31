@@ -1,11 +1,14 @@
 {
   "name": "agents-factory",
-  "version": "0.1.0",
-  "description": "Star-shaped delivery pipeline: 28 specialist agents, the creating-stakeholder-packet skill, and the run-delivery command that turn a Stakeholder Input Packet into a deployed application.",
+  "version": "0.2.0",
+  "description": "Delivery framework with 29 independently invocable specialists plus a governed pipeline, five skills, and the run-delivery and run-status commands.",
   "author": {
     "name": "valentin",
     "email": "contact@veglez.com"
   },
+  "homepage": "https://github.com/veglezMX/agent-factory",
+  "repository": "https://github.com/veglezMX/agent-factory",
+  "license": "MIT",
   "keywords": [
     "agents",
     "delivery-pipeline",

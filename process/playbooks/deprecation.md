@@ -6,7 +6,7 @@ entry_criteria:
   - the prior run on the affected product is closed (handoff-protocol §6.1)
   - a removal decision exists, named and dated, traceable to the decision-maker (packet §16)
   - the canonical docs/ baseline exists to diff the removal against (baseline: consumes)
-agents: [01,02,04,08,10,11,13,14,15,17,18,19,20,22,26]
+agents: [01,02,04,08,10,11,13,14,15,17,18,19,20,22,26,27,28]
 skills: []
 gates: [scope, release]
 baseline: consumes
@@ -70,6 +70,8 @@ PHASE 0 — SCOPE & BLAST RADIUS
 PHASE 2 — UNBUILD
   10-contract-client-guardian      deprecate contract surfaces with versioning; regenerate clients
   14-frontend-feature-builder      migrate UI consumers off; remove retired screens/flows   (~ if UI scope)
+  28-product-analytics-engineer    retire the target's events; fix funnels/KPIs that
+                                   silently break when those events stop arriving           (~)
   13-backend-domain-implementer    migrate backend consumers off; remove retired services/routes
   11-data-migration-engineer       data offboarding/export + retention-compliant deletion migration
   15-security-engineer             revoke obsolete permissions/secrets/egress of the target   (~)
@@ -77,6 +79,7 @@ PHASE 2 — UNBUILD
 
 PHASE 3 — HARDENING
   17-validation-test-engineer      removed-behavior gone; survivors green; retention-deletion verified
+  27-accessibility-auditor         surviving nav/flows still reachable after screen removal   (~ if UI scope)
   18-code-reviewer                 removal diff review: no dangling refs, no dead code left   ↺ 13/14
 
 PHASE 4 — DELIVERY
@@ -108,22 +111,24 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 
 9. **Contract & Client Guardian (`10`).** As the single owner of API truth, deprecates the target's contract surfaces with versioning per the plan — marks deprecated, or removes after consumers have migrated — and regenerates clients so drift cannot creep in. **Every contract change in this run routes through `10`; no inline edits.**
 10. **Frontend Feature Builder (`14`).** **Conditional** — engaged when UI consumers exist. Migrates frontend consumers off the deprecated surface and removes the retired screens, flows, and route states. Any needed contract change triggers `↺ 10`, never an inline edit. Removes retired user-facing strings from i18n with the screens.
-11. **Backend Domain Implementer (`13`).** Migrates backend consumers off the deprecated surface and removes the retired services, routes, and use cases in dependency order — consumers of the target first, the target last. Any contract or schema change triggers `↺ 10` / `↺ 11`, never an inline edit.
-12. **Data & Migration Engineer (`11`).** Executes the offboarding: export migrations where §9 requires retention, then the retention-compliant deletion migration, each with a rollback note. KEY INVARIANT holds at execution: no destructive migration ships without explicit human approval (carried from Gate 1), and no category is dropped that §9 says must be retained.
-13. **Security Engineer (`15`).** **Conditional** — engaged when the target carried permissions, secrets, or provider egress. Revokes the obsolete role/permission entries, rotates or removes orphaned secrets, and withdraws egress to providers the target alone used. Findings that block removal route to the owning implementer via `01`.
-14. **Infrastructure Guardian (`22`).** **Conditional** — engaged when the target had dedicated platform or provisioned resources. Reviews that the removal leaves no orphaned infrastructure (queues, buckets, jobs, scheduled tasks) and no provisioning resource still pointing at deleted code. Read-only; findings route via `01`.
+11. **Product Analytics & Instrumentation Engineer (`28`).** **Conditional** — engaged when the target emitted product events or fed a funnel, KPI, or experiment surface. Retires the target's events at the emission site alongside the code that emitted them, and repairs every derived surface that would otherwise break *silently*: a funnel whose middle step stops arriving does not error, it just reports a cliff, and a KPI that quietly loses an input keeps rendering a number that is now wrong. KEY INVARIANT for this step: **no retired event leaves a live surface reading plausibly but falsely.** Historical event data is subject to the same §9 obligations as any other stored data — its retention or deletion routes through `11`, never decided here.
+12. **Backend Domain Implementer (`13`).** Migrates backend consumers off the deprecated surface and removes the retired services, routes, and use cases in dependency order — consumers of the target first, the target last. Any contract or schema change triggers `↺ 10` / `↺ 11`, never an inline edit.
+13. **Data & Migration Engineer (`11`).** Executes the offboarding: export migrations where §9 requires retention, then the retention-compliant deletion migration, each with a rollback note. KEY INVARIANT holds at execution: no destructive migration ships without explicit human approval (carried from Gate 1), and no category is dropped that §9 says must be retained.
+14. **Security Engineer (`15`).** **Conditional** — engaged when the target carried permissions, secrets, or provider egress. Revokes the obsolete role/permission entries, rotates or removes orphaned secrets, and withdraws egress to providers the target alone used. Findings that block removal route to the owning implementer via `01`.
+15. **Infrastructure Guardian (`22`).** **Conditional** — engaged when the target had dedicated platform or provisioned resources. Reviews that the removal leaves no orphaned infrastructure (queues, buckets, jobs, scheduled tasks) and no provisioning resource still pointing at deleted code. Read-only; findings route via `01`.
 
 ### Phase 3 — Hardening
 
-15. **Validation & Test Engineer (`17`).** Verifies the removal three ways: (1) the retired behavior is gone — its tests are deleted, and the journeys/rules that referenced it are removed from the suites, not left red; (2) the survivors are green — the full ladder still passes for everything that stays, proving no dependent was severed; (3) the data offboarding is verified — retained categories are present and exported, deleted categories are absent, against §9. Failures route to the owning implementer; the relevant rung restarts.
-16. **Code Reviewer (`18`).** Full removal-diff review: no dangling references to deleted symbols, no dead code or feature flags left behind, no orphaned config. **↺** Blocking findings return to the owning implementer; boundary smells route to `08`, security smells to `15`. Re-review after fixes.
+16. **Validation & Test Engineer (`17`).** Verifies the removal three ways: (1) the retired behavior is gone — its tests are deleted, and the journeys/rules that referenced it are removed from the suites, not left red; (2) the survivors are green — the full ladder still passes for everything that stays, proving no dependent was severed; (3) the data offboarding is verified — retained categories are present and exported, deleted categories are absent, against §9. Failures route to the owning implementer; the relevant rung restarts.
+17. **Accessibility Auditor (`27`).** **Conditional** — engaged when the removal touched UI. Removing screens and flows is a structural change to navigation, and the failure mode is specific to this case: a deleted screen can leave a focus target that no longer exists, a skip link or landmark pointing nowhere, a breadcrumb or menu item orphaned, or a keyboard path through the surviving flow that is now broken mid-journey. Audits the **survivors**, not the deleted scope — the question is whether what remains is still reachable and announced, not whether the removed thing was accessible. **↺** Blocking findings return to `14`.
+18. **Code Reviewer (`18`).** Full removal-diff review: no dangling references to deleted symbols, no dead code or feature flags left behind, no orphaned config. **↺** Blocking findings return to the owning implementer; boundary smells route to `08`, security smells to `15`. Re-review after fixes.
 
 ### Phase 4 — Delivery
 
-17. **Documentation & Runbook Writer (`20`).** Removes the retired feature's developer, API, and operator documentation; writes the **deprecation/release notes** and the consumer-facing migration notice. KEY INVARIANT: the deprecation is **communicated** — what was removed, from when, what consumers must do, and what data was retained or deleted — strictly from what was actually removed.
-18. **CI/CD pipeline pass (`19`).** Ships the removal: pipelines re-run green without the retired paths, the deletion migration is wired before app rollout, and a rollback plan for the deletion is documented and staged (the case-specific care here is that a deletion's rollback may be a restore-from-export, not a code revert).
-19. **Release readiness + `[H]` GATE 2 — Release.** The CI/CD agent assembles release evidence (consumers migrated, contracts deprecated/withdrawn cleanly, data offboarded per §9 with retention verified, security revocations done, survivors green, removal diff reviewed, rollback documented, deprecation notes published). The approver (packet §16) authorizes; CI/CD executes the removal.
-20. **Orchestrator close-out (`01`).** Final delivery summary; **removes** the retired scope from canonical requirements, glossary, architecture, and contracts in `docs/` (protocol §6.3) so the next increment diffs against a baseline that no longer references the deleted capability. Archives the open-question seed for the next packet.
+19. **Documentation & Runbook Writer (`20`).** Removes the retired feature's developer, API, and operator documentation; writes the **deprecation/release notes** and the consumer-facing migration notice. KEY INVARIANT: the deprecation is **communicated** — what was removed, from when, what consumers must do, and what data was retained or deleted — strictly from what was actually removed.
+20. **CI/CD pipeline pass (`19`).** Ships the removal: pipelines re-run green without the retired paths, the deletion migration is wired before app rollout, and a rollback plan for the deletion is documented and staged (the case-specific care here is that a deletion's rollback may be a restore-from-export, not a code revert).
+21. **Release readiness + `[H]` GATE 2 — Release.** The CI/CD agent assembles release evidence (consumers migrated, contracts deprecated/withdrawn cleanly, data offboarded per §9 with retention verified, security revocations done, survivors green, removal diff reviewed, rollback documented, deprecation notes published). The approver (packet §16) authorizes; CI/CD executes the removal.
+22. **Orchestrator close-out (`01`).** Final delivery summary; **removes** the retired scope from canonical requirements, glossary, architecture, and contracts in `docs/` (protocol §6.3) so the next increment diffs against a baseline that no longer references the deleted capability. Archives the open-question seed for the next packet.
 
 ---
 
@@ -140,6 +145,8 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 | Data-retention vs removal conflict | 11 / 26 | Human via Orchestrator (blocking) |
 | Security revocation blocks safe removal | 15 | Owning implementer (13 / 14) via 01 |
 | Orphaned infrastructure left by the removal | 22 | Owning implementer / 19 via 01 |
+| Funnel / KPI / experiment surface left reading falsely after event retirement | 28 | 28, or 13 / 14 for the emission site |
+| Surviving navigation unreachable or unannounced after screen removal | 27 | 14 |
 | Removed-behavior test still red or survivor test broken | 17 | Owning implementer |
 | Dangling reference or dead code in removal diff | 18 | Owning implementer |
 | Anything untraceable to the removal decision or plan | Anyone | Human via Orchestrator (blocking) |

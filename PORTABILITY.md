@@ -22,9 +22,10 @@ This framework is authored once and run on several AI coding platforms. This doc
 | Artifact | Claude Code | GitHub Copilot / VS Code | Cursor | Zoo Code / Roo Code (native) | Generic `.agents` |
 |---|---|---|---|---|---|
 | Agents | `.claude/agents/*.md` *(generated)* | `.github/agents/*.agent.md` *(source of truth)* | `.cursor/rules/*.mdc` *(reference)* | `.roomodes` or global `custom_modes.yaml` *(generated, single `customModes:` file)* | `.agents/*.yaml` *(generated, one file per agent)* |
-| Skills | `.claude/skills/<name>/SKILL.md` | `.github/prompts/*.prompt.md` or manual | manual prompt | `.roo/skills/<name>/SKILL.md` *(manual invoke)* | `.agents/skills/<name>/SKILL.md` |
+| Skills | `.claude/skills/<name>/SKILL.md` *(generated)* | `.github/skills/<name>/SKILL.md` *(source of truth)* | manual prompt | `.roo/skills/<name>/SKILL.md` *(manual invoke)* | `.agents/skills/<name>/SKILL.md` |
+| Commands | `.claude/commands/*.md` *(generated)* | `.github/commands/*.md` *(source of truth)* | n/a | n/a | n/a |
 | Orchestrator start | `/run-delivery <run-id>` (main loop) | invoke `delivery-orchestrator` agent | drive in main chat | switch to the `delivery-orchestrator` mode | switch to the `delivery-orchestrator` mode |
-| Run state | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` |
+| Pipeline run state | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` |
 | Process docs | `process/`, `templates/` | same | same | same | same |
 
 ---
@@ -36,9 +37,12 @@ The roster assigns each agent a **posture**, not a fixed tool list. Translate th
 | Posture | Meaning | VS Code / Copilot ids | Claude Code tools | Roo Code groups |
 |---|---|---|---|---|
 | `R` | read-only | `read`, `search` | `Read, Grep, Glob` | `read` |
+| `R+route` | read-only + routing-only `agent` | `read`, `search`, `agent` | `Read, Grep, Glob, Task` | `read` |
 | `E` | edit | `read`, `search`, `edit` | `Read, Grep, Glob, Edit, Write` | `read, edit` |
 | `E+T` | edit + terminal | `read`, `search`, `edit`, `execute`, `todo` | `Read, Grep, Glob, Edit, Write, Bash, TodoWrite` | `read, edit, command` |
-| `O` | orchestration | `agent` (+ `read`) | `Task` (+ `Read`) — **must run as the main loop on Claude Code** | `read` (Roo switches modes natively) |
+| `O` | orchestration | `read`, `search`, `agent`, `todo` | `Read, Grep, Glob, Task, TodoWrite` — **must run as the main loop on Claude Code** | `read` (Roo switches modes natively) |
+
+`R+route` and `O` each describe exactly one agent — the Code Reviewer (18) and the Delivery Orchestrator (01). They are separate postures because both carry the `agent` tool for different reasons and with different limits; see the legend in `process/agent-roster.md`. Tool ids within a definition are written in the canonical order `read`, `search`, `web`, `edit`, `execute`, `agent`, `todo`, and the converters preserve that order in their output.
 
 The converter applies this id→name map automatically:
 
@@ -56,13 +60,13 @@ Roo Code:     read/search → read   |   edit → edit   |   execute → command
 ### Claude Code
 
 1. Run `scripts/install.sh --target claude`. By default it installs **globally** to `~/.claude` (available in every project); add `--scope project --path <dir>` to install into one project's `.claude/` instead. It:
-   - reads every `.github/agents/*.agent.md` (skipping the `test` scaffold),
+   - reads every `.github/agents/*.agent.md`,
    - writes `agents/<name>.md` with the `tools:` line rewritten to Claude tool names and `argument-hint` dropped,
-   - ensures the skills exist under `skills/`,
-   - copies the `run-delivery` driver into `commands/`.
+   - syncs the skills from `.github/skills/` into `skills/`,
+   - syncs the commands from `.github/commands/` into `commands/`.
 2. For a **global** install nothing needs copying. For a **project** install, also copy `process/`, `templates/`, and (when you start) `runs/` into that project.
 3. Start a run with **`/run-delivery <run-id>`**. This is the key step: it makes your **main Claude session act as the Delivery Orchestrator**, because a Claude subagent cannot invoke other subagents — only the main loop can `Task`-dispatch the roster.
-4. Direct human use of any single agent still works via the agent picker / `Task`.
+4. Direct human use of any single agent works via the picker / `Task` with `mode: standalone`, a bounded task, and a target; no run ID or handoff is required.
 
 ### GitHub Copilot / VS Code
 
@@ -71,11 +75,13 @@ Roo Code:     read/search → read   |   edit → edit   |   execute → command
 3. **VS Code note:** the global dir above is the **Copilot CLI** convention. VS Code reads a repo's `.github/` (use `--scope project`) or its own profile dir; if you need a custom user-level folder there, point `chat.agentFilesLocations` / `chat.agentSkillsLocations` at it with an **absolute** path (VS Code does not expand `~`).
 4. Start a run by invoking the **`delivery-orchestrator`** agent and pasting/pointing at the packet.
 5. **Caveat:** whether `delivery-orchestrator` can invoke the other agents depends on your Copilot version's agent-to-agent support. If it can't, drive the sequence yourself: invoke each agent in playbook order, pasting the prior handoff as input.
+6. For standalone work, invoke the desired specialist directly with `mode: standalone`, a bounded task, and a target. No Orchestrator or handoff is involved.
 
 ### Cursor
 
 1. Run `scripts/install.sh --target cursor`. By default it installs **globally** to `~/.cursor/rules`; add `--scope project --path <dir>` for one project's `.cursor/rules/`. It writes `<name>.mdc` — each agent body as a reference rule with `alwaysApply: false`, so you can `@`-mention the one you need.
 2. Cursor has no native multi-agent orchestrator. Drive the run in the main chat: act as the orchestrator yourself (or paste the `delivery-orchestrator` rule), invoke each agent rule in playbook order, and write handoff files under `runs/<run-id>/` between steps.
+3. For standalone work, `@`-mention only the desired specialist rule and provide `mode: standalone`, a bounded task, and a target; do not create a run workspace or handoff.
 
 ### Zoo Code / Roo Code (native `.roomodes`)
 
@@ -103,13 +109,14 @@ The framework is a **specification**, not a binding. To port it:
 - Map each agent's **posture** to your harness's tool permissions (table above).
 - Place agent bodies wherever your harness loads system prompts / personas.
 - Satisfy the orchestration requirement: either your harness lets one agent invoke another (wire 01 to call the rest), **or** your main control loop plays the orchestrator and dispatches the rest.
-- Use `runs/<run-id>/` as the on-disk state store and the handoff payload format from the protocol §2. As long as those hold, statelessness, auditability, and traceability are preserved.
+- Implement both modes from `process/agent-invocation-contract.md`: direct standalone calls return to the human, while pipeline calls use the Orchestrator.
+- For pipeline mode, use `runs/<run-id>/` as the on-disk state store and the handoff payload format from protocol §2. Standalone mode needs neither unless explicitly requested.
 
 ---
 
 ## The run process (entry point)
 
-Regardless of platform, a run is:
+Regardless of platform, a governed pipeline run is:
 
 1. **Packet** — author/freeze the Stakeholder Input Packet under `runs/<run-id>/00-packet/` (skill: `creating-stakeholder-packet`).
 2. **Boot** — invoke the orchestrator; it creates the run workspace (protocol §1) and routes the packet to the Requirements Analyst.
@@ -123,4 +130,16 @@ Full semantics: [`process/agent-handoff-protocol.md`](process/agent-handoff-prot
 
 ## Keeping copies in sync
 
-`.github/agents/` is the **source of truth**. After editing an agent there, re-run `scripts/install.sh --target claude` (and `--target cursor` / `--target roo` / `--target agents`) to regenerate the derived folders. Skills are mirrored in `.github/skills/` and `.claude/skills/`; edit one and copy to the other (they are kept byte-identical). Do not hand-edit the generated `.claude/agents/` or `.agents/` files — your changes will be overwritten on the next conversion.
+**`.github/` is the source of truth** — `agents/`, `skills/`, and `commands/`. Everything else is derived.
+
+After editing anything under `.github/`, run one command:
+
+```bash
+scripts/install.sh --target repo
+```
+
+`repo` regenerates every derived directory this repository tracks — the plugin components (`agents/`, `skills/`, `commands/`), `.claude/`, and `.cursor/rules/` — in a single pass. It is idempotent: a second run reports `0 written`. Use `--dry-run` first to see what would change without writing anything.
+
+Do not hand-edit a derived file. The installer overwrites `agents/`, `.claude/`, and `.cursor/` unconditionally, and it overwrites skills and commands too (pass `--keep-existing` if you have deliberately customised a destination copy). If you rename or delete an agent, the installer reports the leftover derived file as an `ORPHAN` rather than deleting it for you — remove it by hand.
+
+The per-platform targets (`--target claude|cursor|copilot|roo|agents`) install *outward*, to `$HOME` or to another project. `--target repo` and `--target plugin` write only into this repository and reject `--path`.
