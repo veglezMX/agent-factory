@@ -186,6 +186,7 @@ git checkout v0.3.0 && scripts/install.sh --target <platform>          # any pla
 ```
 
 How releases are made, and what counts as a breaking change: [`docs/RELEASING.md`](docs/RELEASING.md).
+Where the project is heading next: [`ROADMAP.md`](ROADMAP.md).
 
 ---
 
