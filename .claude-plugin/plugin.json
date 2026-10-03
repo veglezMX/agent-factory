@@ -1,6 +1,6 @@
 {
   "name": "agents-factory",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Delivery framework with 29 independently invocable specialists plus a governed pipeline, 10 case playbooks, six skills, and four commands (run-delivery, run-advisory, run-status, new-agent).",
   "author": {
     "name": "valentin",

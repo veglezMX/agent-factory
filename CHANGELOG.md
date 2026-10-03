@@ -11,6 +11,19 @@ on is tagged and published as described in [`docs/RELEASING.md`](docs/RELEASING.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-03
+
+The first tagged release. The repository's invariants are now enforced by a test suite and
+CI gates instead of review, the installer is hardened and ships the framework docs every
+agent depends on, and releases follow a written, automated process. Also released here: the
+Codex, Hermes, and Zoo/Roo install targets, `/run-advisory`, and the `routing-a-step` skill,
+which landed after `0.2.0` was cut.
+
+**Upgrading from 0.2.0:** re-run your platform install (`scripts/install.sh --target …`) — it
+now also installs `process/` and `templates/` to `~/.agents-factory/`. Plugin users run
+`scripts/install.sh --target docs` once. A Zoo/Roo global install no longer overwrites a
+`custom_modes.yaml` it did not create; pass `--force` to replace it (a `.bak` is kept).
+
 ### Added
 
 - **`scripts/install.sh --target codex`** — installs the roster into OpenAI Codex. Codex has
@@ -270,6 +283,7 @@ First packaged release (`2c0dc9b`, tagged retroactively).
 - One worked example and one real run workspace, `runs/2026-06-comedor-vecinal/`, live
   through Phase 0.
 
-[Unreleased]: https://github.com/veglezMX/agent-factory/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/veglezMX/agent-factory/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/veglezMX/agent-factory/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/veglezMX/agent-factory/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/veglezMX/agent-factory/releases/tag/v0.1.0
