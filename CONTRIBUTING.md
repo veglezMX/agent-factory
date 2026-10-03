@@ -124,8 +124,8 @@ in a release branch.
 ### An agent
 
 Use the `authoring-an-agent` skill (or `/new-agent <slug>`); it encodes these rules and is
-kept in step with them. It expects the [`prompt-anatomy`](https://github.com/veglezMX/veglez-skills)
-skill for the body's component structure.
+kept in step with them. The body's component structure and an authoring checklist ship with
+that skill, in [`prompt-anatomy.md`](.github/skills/authoring-an-agent/prompt-anatomy.md).
 
 1. **Claim a roster number** in `process/agent-roster.md` first: the overview row (one posture
    token from the legend) plus a `### NN — Name` entry with Does / Scope / Tools / Invocation.

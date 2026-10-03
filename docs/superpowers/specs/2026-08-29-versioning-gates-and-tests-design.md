@@ -1,7 +1,7 @@
 # Versioning, Gates, and a Test Suite for agents-factory
 
 **Date:** 2026-08-29
-**Status:** Implemented in 0.3.0 (see CHANGELOG). The branch model is `main` + `dev`; `docs/RELEASING.md` is the living version of §5.3–§5.4.
+**Status:** Implemented in 0.3.0 (see CHANGELOG). The branch model is `main` + `dev`; `docs/RELEASING.md` is the living version of §5.3–§5.4. §5.6 is superseded: the external `prompt-anatomy` prerequisite was removed after 0.3.0, and the anatomy now ships inside the `authoring-an-agent` skill (`.github/skills/authoring-an-agent/prompt-anatomy.md`).
 **Scope:** `agents-factory` only. No changes to `veglez-skills`.
 
 ---

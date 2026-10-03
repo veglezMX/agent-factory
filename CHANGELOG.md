@@ -11,6 +11,20 @@ on is tagged and published as described in [`docs/RELEASING.md`](docs/RELEASING.
 
 ## [Unreleased]
 
+### Changed
+
+- **`authoring-an-agent` no longer depends on another repository** (skill `0.2.0`). The
+  prompt anatomy that agent bodies follow used to be an external `prompt-anatomy` skill from
+  `veglezMX/veglez-skills`, declared as a prerequisite. That repository is not public, so an
+  outside contributor could not follow the authoring steps. The anatomy now ships with the skill as
+  `prompt-anatomy.md`. It is a distillation scoped to agent definitions: four structural
+  principles, the fourteen components mapped onto the fixed section template, how durable
+  rules and per-call material divide, the tool-using-agent rules in this framework's terms
+  (including that `tools:` is enforced per agent only where the harness supports it), and an
+  eleven-item authoring checklist. The `prerequisites:` entry is gone. Step 4, Step 7, the
+  conformance checklist, `README.md`, and `CONTRIBUTING.md` point at the local file, and
+  `/new-agent` now runs the checklist and reports its result.
+
 ## [0.3.0] — 2026-10-03
 
 The first tagged release. The repository's invariants are now enforced by a test suite and

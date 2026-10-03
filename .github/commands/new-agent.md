@@ -35,7 +35,8 @@ check the rest of the roster relies on. Do not compose a definition from scratch
    `argument-hint`, `tools` in canonical id order `read, search, web, edit, execute, agent,
    todo`), the persona line stating `agent NN in the delivery roster`, then the fifteen `##`
    sections in the fixed order, plus `## Terminal Discipline` **iff** `tools` includes
-   `"execute"`.
+   `"execute"`. Write each section to the component it implements in the skill's
+   `prompt-anatomy.md` §2.
 3. **Include the shared invocation-contract paragraph** under `## Invocation`, copied verbatim
    from the sibling, followed by this agent's own trigger paragraph. End with
    `You call no other agents.` unless the roster entry explicitly grants otherwise.
@@ -61,5 +62,9 @@ grep '^tools:' .claude/agents/$1.md               # the generated tool line
 scripts/install.sh --target repo                  # must report 0 written on a second run
 ```
 
-Report what you created, which sibling you mirrored, which playbooks now route to it, and any
-verification that did not come back clean. Do not claim conformance you have not checked.
+Then run the authoring checklist in the skill's `prompt-anatomy.md` §5 against the new
+definition, and fix every `FAIL`.
+
+Report what you created, which sibling you mirrored, which playbooks now route to it, the
+checklist result, and any verification that did not come back clean. Do not claim conformance
+you have not checked.

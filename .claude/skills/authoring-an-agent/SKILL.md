@@ -1,11 +1,7 @@
 ---
 name: authoring-an-agent
 description: Use when adding a new agent to the roster, or when editing an existing agent definition — covers the roster entry, the frontmatter, the fixed section template, the invocation-contract boilerplate, playbook routing, and regeneration. Required before writing any file under .github/agents/, because a definition that diverges from the template is invisible to every convention the rest of the roster relies on.
-version: 0.1.0
-prerequisites:
-  - skill: prompt-anatomy
-    source: https://github.com/veglezMX/veglez-skills
-    when: authoring-time only (writing or restructuring an agent definition)
+version: 0.2.0
 ---
 
 # Authoring an Agent
@@ -22,10 +18,10 @@ knows what the convention *is*.
 
 This skill is that knowledge. Follow it in order; each step depends on the previous one.
 
-**Prerequisite (authoring-time only):** the body sections follow the component structure of
-the `prompt-anatomy` skill, published from
-[`veglezMX/veglez-skills`](https://github.com/veglezMX/veglez-skills). Install it alongside
-this one when you write or restructure an agent. Running a delivery run does not need it.
+**The prompt anatomy ships with this skill.** The body sections follow a component structure
+described in `prompt-anatomy.md`, next to this `SKILL.md`. It covers what each section must do,
+the structural rules every section obeys, and an authoring checklist. Read it before Step 4.
+Nothing outside this repository is needed.
 
 **Core principle: mirror a sibling, do not compose from scratch.** Pick the existing agent
 closest in posture and phase, and follow its shape. Every deviation you invent is a deviation
@@ -112,8 +108,9 @@ All four fields are required. Two rules that are easy to miss:
 
 ## Step 4 — Write the body against the fixed template
 
-Open the sibling you chose in Step 1 and follow it. The body opens with a persona line, then
-**fifteen `##` sections in this exact order**:
+Open the sibling you chose in Step 1 and follow it. `prompt-anatomy.md` §2 says what each
+section below must do and the failure each one most often shows. The body opens
+with a persona line, then **fifteen `##` sections in this exact order**:
 
 ```text
 You are the <Name>, agent NN in the delivery roster[, <optional descriptive clause>].
@@ -210,6 +207,9 @@ scripts/install.sh --target repo
 A regeneration that reports `WARNING` has found an unparseable or unmapped tool id. A run that
 reports `ORPHAN` has found a derived file whose source you renamed or deleted.
 
+Finally, run the authoring checklist in `prompt-anatomy.md` §5 against the definition. The tests check its shape; the checklist checks whether each section
+does its job.
+
 ---
 
 ## Conformance checklist
@@ -224,10 +224,12 @@ reports `ORPHAN` has found a derived file whose source you renamed or deleted.
 - [ ] Shared invocation-contract paragraph, plus this agent's own trigger paragraph
 - [ ] `You call no other agents.` unless the roster entry says otherwise
 - [ ] Listed in every playbook that uses it, and in the matrix, consistently
+- [ ] Prompt-anatomy checklist (`prompt-anatomy.md` §5) run, with no `FAIL` left
 - [ ] `--target repo` run; a second run reports `0 written`
 
 ## Reference
 
+- `prompt-anatomy.md` (next to this `SKILL.md`) — the component structure and the authoring checklist
 - `process/agent-roster.md` — the registry and the posture legend
 - `process/agent-invocation-contract.md` — `pipeline` vs `standalone`, §5 author conformance
 - `process/agent-handoff-protocol.md` — §2 handoff schema the Output Contract maps onto
