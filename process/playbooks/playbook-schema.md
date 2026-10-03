@@ -2,7 +2,7 @@
 
 **Purpose:** The contract every case-playbook obeys. The roster (`../agent-roster.md`) defines *who* the agents are; the handoff protocol (`../agent-handoff-protocol.md`) defines *how* work moves between them. A **playbook** defines *which* agents and skills a given **case** uses, in *what order*, with *which gates* and *loop-backs*. One file per case.
 
-A "case" is a class of work with its own trigger, entry criteria, and agent subset — e.g. `greenfield`, `brownfield-onboard`, `defect`. Not every case calls every agent. Adding a new case is a drop-in: author one `playbooks/<case>.md` that conforms to this schema and add a row to `README.md`'s matrix. The roster and protocol never change to add a case.
+A "case" is a class of work with its own trigger, entry criteria, and agent subset — e.g. `greenfield`, `brownfield-onboard`, `defect`. Not every case calls every agent. Adding a new case is a drop-in: author one `playbooks/<case>.md` that conforms to this schema and add a column to `README.md`'s matrix. The roster and protocol never change to add a case.
 
 ---
 
@@ -28,7 +28,7 @@ closure: >                       # one line: what makes a run of this case "done
 
 ### Field rules
 
-- **`case`** — unique across all playbooks; equals the filename stem; equals the matrix column header in `README.md`.
+- **`case`** — unique across all playbooks; equals the filename stem; names the matrix column in `README.md` (the column header is a two-letter abbreviation, mapped to the slug in the matrix legend).
 - **`agents`** — the subset of roster IDs (`01`–`29`) this case uses. Every ID **must** exist in the roster overview table. An ID not in the roster is an error (a conformance checker is a future drop-in; until then it is a review-time check).
 - **`skills`** — skill names the case relies on (e.g. `creating-stakeholder-packet`). Must exist in the skill set.
 - **`gates`** — ordered gate slugs. A case may legitimately have fewer gates than greenfield, or none. Gate semantics live in handoff-protocol §3.
@@ -56,4 +56,4 @@ closure: >                       # one line: what makes a run of this case "done
 - **Project-agnostic.** A playbook describes the case, never a specific project. Project specifics live in `examples/` (narrative) and `runs/` (real workspace artifacts).
 - **References, never redefinitions.** A playbook names roster agents by ID and links protocol sections; it never restates an agent's scope or a gate's semantics. Single source of truth stays the roster and protocol.
 - **No time estimates.** Ordering reflects dependency only, never duration — same rule as the roster and protocol.
-- **Drop-in, not rewire.** A new case adds a playbook + a matrix row. If a case needs an agent the roster lacks, the roster gets the agent first (its own change), then the playbook references it.
+- **Drop-in, not rewire.** A new case adds a playbook + a matrix column. If a case needs an agent the roster lacks, the roster gets the agent first (its own change), then the playbook references it.

@@ -159,7 +159,7 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 
 ## Limitations & prerequisites
 
-- **Orchestration model.** The framework assumes the orchestrator can invoke the other agents. On Claude Code, subagents cannot spawn subagents — so the orchestrator must run as the **main loop** (the `/run-delivery` driver does this). On Copilot/Cursor, agent-to-agent invocation is version-dependent; Codex and Hermes have none at all. Where the harness cannot dispatch, the `routing-a-step` skill makes you the transport — run state was always on disk, so only the automation is lost. See PORTABILITY.
+- **Orchestration model.** The framework assumes the orchestrator can invoke the other agents. On Claude Code, subagents cannot spawn subagents — so the orchestrator must run as the **main loop** (the `/run-delivery` driver does this). On Copilot and Roo/Zoo, agent-to-agent invocation is version-dependent; Cursor, Codex, and Hermes have none at all. Where the harness cannot dispatch, the `routing-a-step` skill makes you the transport — run state was always on disk, so only the automation is lost. See PORTABILITY.
 - **`tools:` frontmatter is platform-specific.** The R / E / E+T / O **posture** is the portable contract; the literal tool names differ per platform. The converter rewrites them for Claude Code.
 - **Gates need a human.** Runs halt for sign-off by design; a stalled-looking run waiting at a gate is the framework working as intended, not a failure to recover from.
 - **`runs/` is the state store.** Keep it in the repo (or a sibling repo for pre-repo phases). Statelessness depends on it.

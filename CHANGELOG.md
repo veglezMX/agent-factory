@@ -5,7 +5,9 @@ All notable changes to this project are recorded here. The version lives in
 skill/command set; **patch** for documentation and installer fixes.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely.
-Versions before `0.2.0` were not tagged; their entries are reconstructed from git history.
+`0.1.0` and `0.2.0` were tagged retroactively on the commits that set those versions in
+`plugin.json`; their entries are reconstructed from git history. Every release from `0.3.0`
+on is tagged and published as described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
@@ -43,6 +45,36 @@ Versions before `0.2.0` were not tagged; their entries are reconstructed from gi
   comment, so a renamed or deleted agent is reported as an `ORPHAN` even though agent-skills
   and framework skills share one directory. A name collision between a framework skill and
   an agent is reported as a warning instead of silently overwriting.
+
+- **`scripts/install.sh --target roo`** (alias `zoo`) — a native Zoo Code / Roo Code
+  install: one `.roomodes` file with a `customModes:` array per project, or the editor's
+  global `custom_modes.yaml` (auto-detected in VS Code / VS Code Server globalStorage).
+  Landed on `main` after `0.2.0` was cut and was not recorded until now.
+- **`/run-advisory`** — a lightweight review path that chains read-only/review agents over an
+  existing codebase, carrying each hand-off as a file under `agents-run/`. Also landed after
+  `0.2.0` without an entry.
+- **`process/advisory-pipeline-usage.md`** and the standalone invocation cheat sheet entry for
+  the UI Layout Designer.
+
+### Fixed
+
+- **Manifest descriptions disagreed.** `marketplace.json` claimed five skills and both
+  manifests named two of the four commands. Both now carry one identical description with
+  the correct counts.
+- **The `authoring-a-playbook` matrix check silently checked nothing.** Its embedded script
+  listed nine columns against a ten-column matrix, filtered out every row, and printed
+  `mismatches: 0`. The check now lives in the test suite; the skill points at it.
+- Stale counts and references: "nine existing cases", "Twenty-eight of the 29", the
+  `gate-release.md` filename in `incident`, the "orchestrator adds that section" notes in
+  `refactor` and `data-operation` (protocol §3.4 exists), "row" vs "column" in
+  `playbook-schema.md`, and non-existent protocol §5.2/§5.3 citations in the Delivery
+  Orchestrator.
+- `README.md` said Cursor's agent-to-agent invocation was version-dependent; it has none.
+  `PORTABILITY.md` described skill support on Copilot and Cursor incorrectly.
+- The packet template's traceability appendix named no consumer for agents 03, 08, 09, and
+  21–29. Every roster agent now appears.
+- `CHANGELOG.md` recorded work under `0.1.0` that landed later, and gave the matrix as 261
+  cells (it is 290).
 
 ## [0.2.0] — 2026-07-31
 
@@ -88,7 +120,7 @@ command, the documents no longer over-claim, and the distribution is legally ins
 - **The case × agent matrix over-claimed coverage.** Six cells marked agents `27`/`28` as
   conditional for cases whose playbooks never routed to them. Agent `27` is now a real step
   in `brownfield-onboard`, `defect`, and `deprecation`; agent `28` in `brownfield-onboard`
-  and `deprecation`; and `28 × spike` is corrected to "not used". All 261 cells now
+  and `deprecation`; and `28 × spike` is corrected to "not used". All 290 cells (29 agents × 10 cases) now
   reconcile with the playbooks' `agents:` frontmatter.
 - **The worked example contradicted the run it links.** `process/examples/comedor-greenfield.md`
   described six services and Stripe; `runs/2026-06-comedor-vecinal/` decides an eight-module
@@ -125,20 +157,31 @@ command, the documents no longer over-claim, and the distribution is legally ins
   a directory of 30 files.
 - A stray `.ruff_cache/` from unrelated Python tooling.
 
+### Retroactive notes
+
+These landed between `0.1.0` and `0.2.0` and were originally recorded under `0.1.0` by
+mistake. They are part of `0.2.0`:
+
+- Agent `29`, the standalone-friendly UI Layout Designer (2026-07-14).
+- `process/agent-invocation-contract.md` (`pipeline` and `standalone` modes) and the
+  standalone invocation cheat sheet `process/standalone-invocation.md` (2026-07-10/14).
+- `scripts/install.sh`: global-by-default installation with `--scope project` replacing
+  `--dest`, Copilot CLI global install to `~/.copilot`, and the `agents` target
+  (Roo custom-mode YAML) (2026-06-16).
+
 ## [0.1.0] — 2026-06-14
 
-First packaged release.
+First packaged release (`2c0dc9b`, tagged retroactively).
 
 ### Added
 
-- The 29-agent roster (core `01`–`20`, expansion `21`–`29`), each conforming to the prompt
+- The 28-agent roster (core `01`–`20`, expansion `21`–`28`), each conforming to the prompt
   anatomy, with `.github/agents/` as the source of truth.
-- The process spine: agent roster, handoff protocol, invocation contract (`pipeline` and
-  `standalone` modes), and the standalone invocation cheat sheet.
+- The process spine: agent roster and handoff protocol.
 - Nine case playbooks plus `playbook-schema.md`.
 - The Stakeholder Input Packet template and the `creating-stakeholder-packet` skill.
-- `scripts/install.sh` with `claude`, `cursor`, `copilot`, `agents` (Roo custom-mode), and
-  `plugin` targets; global-by-default installation with `--scope project`.
+- `scripts/install.sh` with `claude`, `cursor`, `copilot`, and `plugin` targets, writing to a
+  `--dest` directory.
 - Packaging as a Claude Code marketplace plugin (`.claude-plugin/`).
 - `README.md` and `PORTABILITY.md`.
 - One worked example and one real run workspace, `runs/2026-06-comedor-vecinal/`, live

@@ -281,20 +281,20 @@ Every pipeline agent must find its raw material in this packet. If an agent has 
 
 | Packet section | Primary consuming agents |
 |---|---|
-| §1 Project Identity | Requirements Analyst, Product Planner, Documentation Writer |
-| §2 Users & Roles | Requirements Analyst, Solution Designer, Security Engineer |
-| §3 User Journeys | Product Planner, Solution Designer, Frontend Feature Builder, Validation & Test Engineer (E2E) |
-| §4 Feature Inventory | Product Planner (scope), Bundle Compiler (task decomposition), Delivery Orchestrator (sequencing) |
+| §1 Project Identity | Requirements Analyst, Product Planner, Documentation Writer, Product Analytics & Instrumentation Engineer (product goals → KPIs) |
+| §2 Users & Roles | Requirements Analyst, Solution Designer, Security Engineer, UX Flow Designer (roles → screens) |
+| §3 User Journeys | Product Planner, Solution Designer, Frontend Feature Builder, Validation & Test Engineer (E2E), UX Flow Designer, UI Layout Designer, Performance & Load Engineer (critical journeys) |
+| §4 Feature Inventory | Product Planner (scope), Bundle Compiler (task decomposition), Delivery Orchestrator (sequencing), AI & Prompt Engineer (AI-behaviour features, when present) |
 | §5 Business Rules | Backend Domain Implementer, Data & Migration Engineer (invariants), Validation & Test Engineer (invariant tests) |
 | §6 Information Tracked | Solution Designer, Data & Migration Engineer, Contract & Client Guardian |
-| §7 External Touchpoints | Integration Engineer (fakes + adapters), Security Engineer (data egress), Solution Designer |
+| §7 External Touchpoints | Integration Engineer (fakes + adapters), Security Engineer (data egress), Solution Designer, AI & Prompt Engineer (model providers) |
 | §8 Permissions | Security Engineer (permission matrix), Backend Domain Implementer (enforcement), Contract & Client Guardian |
-| §9 Privacy & Retention | Security Engineer, Observability Engineer (log redaction), Data & Migration Engineer (retention) |
-| §10 Language & Accessibility | Frontend Feature Builder (i18n, a11y), Documentation Writer |
-| §11 Scale & Reliability | Solution Designer, Observability Engineer, CI/CD & Deployment Engineer |
-| §12 Devices & Channels | Frontend Feature Builder, Validation & Test Engineer (test targets) |
+| §9 Privacy & Retention | Security Engineer, Observability Engineer (log redaction), Data & Migration Engineer (retention), Privacy & Compliance Officer, Product Analytics & Instrumentation Engineer (consent, redaction) |
+| §10 Language & Accessibility | Frontend Feature Builder (i18n, a11y), Documentation Writer, Visual & Design-System Designer (branding, tokens), Accessibility Auditor |
+| §11 Scale & Reliability | Solution Designer, Observability Engineer, CI/CD & Deployment Engineer, Performance & Load Engineer (budgets, SLOs), Infrastructure & Platform Engineer |
+| §12 Devices & Channels | Frontend Feature Builder, Validation & Test Engineer (test targets), UI Layout Designer (breakpoints), Visual & Design-System Designer, Accessibility Auditor |
 | §13 Acceptance Examples | Validation & Test Engineer (acceptance gate), Code Reviewer, Delivery Orchestrator (release gate) |
-| §14 Constraints | Solution Designer (stack/hosting), CI/CD & Deployment Engineer |
+| §14 Constraints | Solution Designer (stack/hosting), CI/CD & Deployment Engineer, Architecture Guardian, Foundation Engineer (tooling), Infrastructure & Platform Engineer, Infrastructure Guardian |
 | §15 Out of Scope | Product Planner, Bundle Intake Validator (orphan detection), all implementers |
 | §16 Decision Process | Delivery Orchestrator (human gates), Requirements Analyst (question routing) |
 | §17 Glossary | Requirements Analyst, all agents (ubiquitous language) |

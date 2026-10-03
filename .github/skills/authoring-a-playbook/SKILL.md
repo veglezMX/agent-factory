@@ -39,7 +39,7 @@ first, as its own change, and only then does a playbook reference it).
 ## Step 1 — Establish that it is a distinct case
 
 A case earns its own playbook when it has a **distinct trigger and distinct entry criteria**,
-not merely a different feel. Test it against the nine existing cases and the picker in
+not merely a different feel. Test it against the existing cases and the picker in
 `process/playbooks/README.md`. Two useful discriminators:
 
 - **What starts it?** A packet, a defect report, a page, a removal decision, a question.
@@ -95,7 +95,7 @@ value; omitting a section is not.
 ## Worked example             link to ../examples/<case>-<project>.md, or "none yet"
 ```
 
-Conventions the existing nine share, which yours should too:
+Conventions the existing playbooks share, which yours should too:
 
 - Open with a **Purpose** paragraph and the `[H]` / `↺` **Legend** before the first section.
 - Name agents as `NN-agent-slug` in the flow block and as `` `NN` `` in prose.
@@ -137,35 +137,20 @@ grep -n '^## ' process/playbooks/<case>.md
 grep '^agents:' process/playbooks/<case>.md
 ```
 
-Reconcile the matrix against every playbook mechanically — this is the check that has actually
-caught defects here:
+Reconcile the matrix against every playbook mechanically. The check lives in the test suite,
+not in this skill, so it cannot silently go stale when the matrix grows a column:
 
 ```bash
-python3 - <<'PY'
-import re
-cols=['gf','bf','df','in','rf','du','sp','dp','do']          # add your column
-case=dict(zip(cols,['greenfield','brownfield-onboard','defect','incident','refactor',
-                    'dependency-upgrade','spike','deprecation','data-operation']))
-md=open('process/playbooks/README.md').read()
-matrix={}
-for line in md.splitlines():
-    m=re.match(r'\|\s*(\d\d)\s*\|[^|]*\|(.*)\|\s*$',line)
-    if not m: continue
-    cells=[c.strip() for c in m.group(2).split('|')]
-    if len(cells)==len(cols): matrix[m.group(1)]=dict(zip(cols,cells))
-bad=0
-for c,f in case.items():
-    listed={a.strip() for a in re.search(r'^agents:\s*\[(.*?)\]',
-             open(f'process/playbooks/{f}.md').read(),re.M).group(1).split(',')}
-    for aid,row in matrix.items():
-        if (row[c] in ('x','~')) != (aid in listed):
-            print(f'MISMATCH {f} agent {aid}: matrix={row[c]!r}'); bad+=1
-print('mismatches:',bad)
-PY
+uv run pytest tests/test_matrix.py tests/test_playbooks.py   # or: just test
 ```
 
-Finally, add the case to the count in `README.md` ("9 cases" → "10 cases") and to the case list
-in the "What's covered" section.
+`test_matrix.py` derives the columns from the matrix header and the case list from the
+playbook files, fails if it parses zero rows, and fails on any cell where `x`/`~` disagrees
+with that playbook's `agents:` list. CI runs it on every pull request; run it locally before
+you push.
+
+Finally, bump the case count in `README.md` (e.g. "10 cases" → "11 cases") and add the case to the
+list in the "What's covered" section.
 
 ---
 

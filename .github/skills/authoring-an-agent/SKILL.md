@@ -95,7 +95,8 @@ All four fields are required. Two rules that are easy to miss:
   byte-identical on that line and produce identical generated tool lists.
 - **`description` is the routing signal** — it is what a harness matches against to decide
   whether to surface this agent. Lead with when to invoke it, not with what it believes in.
-  Aim for the 200–400 character range the roster already sits in.
+  Aim for roughly 200–400 characters; most of the roster sits in that range, and a description
+  much longer than that buries the trigger.
 
 ## Step 4 — Write the body against the fixed template
 
@@ -135,7 +136,7 @@ grep -c '^## ' .github/agents/<slug>.agent.md
 ## Step 5 — State the invocation contract
 
 `process/agent-invocation-contract.md` §5 requires every agent to declare that it follows the
-contract. Twenty-eight of the 29 agents carry a verbatim-identical paragraph under
+contract. All 29 agents carry a verbatim-identical paragraph under
 `## Invocation`. Copy it from a sibling rather than paraphrasing:
 
 > Follow `process/agent-invocation-contract.md`. In `pipeline` mode, require the routed
@@ -148,7 +149,8 @@ contract. Twenty-eight of the 29 agents carry a verbatim-identical paragraph und
 > pipeline-only, while scope, safety, ownership, and verification rules apply in both modes.
 
 Then add a second paragraph naming *this* agent's pipeline trigger and its useful standalone
-targets, ending with what it may call (`You call no other agents.` for all but 01 and 18).
+targets, ending with what it may call — `You call no other agents.` unless the roster's "May call" column
+says otherwise (01 and 18). A few siblings paraphrase that sentence; prefer the literal form.
 
 The contract's other author-facing requirements — treat packet/plan/handoff/canonical-path
 rules as pipeline-only, keep the same verification bar in both modes, avoid mandatory

@@ -7,7 +7,7 @@ This framework is authored once and run on several AI coding platforms. This doc
 | Layer | Portable? | Notes |
 |---|---|---|
 | **Process spine** (`process/`, `templates/`) | ✅ Fully | Plain Markdown the agents read. Copy verbatim. |
-| **Skills** (`SKILL.md` + references) | ⚠️ Format portable | The `name` + `description` frontmatter is the Anthropic skill format (native on Claude Code). Copilot/Cursor need it as a prompt or manual invoke. |
+| **Skills** (`SKILL.md` + references) | ⚠️ Format portable | The `name` + `description` frontmatter is the Agent Skills format: native on Claude Code, Copilot, Codex, and Hermes. Cursor has no skills runtime, so the installer ships each skill as an `@`-mentionable rule. |
 | **Agent definitions** (bodies) | ✅ The prose is | Role, boundaries, output contract, etc. are platform-neutral. |
 | **Agent `tools:` frontmatter** | ❌ Platform-specific | `["read","search","edit","execute"]` are VS Code tool ids. Claude Code uses `Read, Grep, Glob, Edit, Bash`. The **posture** (R/E/E+T/O) is the contract; the literal list is not. |
 | **Agent directory + filename** | ❌ Platform-specific | `.github/agents/*.agent.md` (Copilot) vs `.claude/agents/*.md` (Claude) vs `.cursor/rules/*.mdc` (Cursor). |
