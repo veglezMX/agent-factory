@@ -1,6 +1,7 @@
 ---
 name: authoring-a-playbook
 description: Use when adding a new case playbook to process/playbooks/, editing an existing one, or reviewing a change to one — covers the required frontmatter, the fixed body sections, the hard rules, and the matrix/frontmatter agreement that reviews have historically missed. Required before creating any file under process/playbooks/, because playbook-schema.md is machine-checkable in principle but checked by humans in practice.
+version: 0.1.0
 ---
 
 # Authoring a Playbook

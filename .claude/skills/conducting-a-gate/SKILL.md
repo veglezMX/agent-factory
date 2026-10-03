@@ -1,6 +1,7 @@
 ---
 name: conducting-a-gate
 description: Use when a delivery run reaches a human gate and someone must assemble the evidence, make the decision, and write the gate record — Gate 1 scope, Gate 2 design, Gate 3 release, or a case-specific variant. Also use when a gate was rejected or approved-with-conditions and the run has to resume correctly. Gates are the framework's only hard stop, and an unsigned or sloppily signed gate is how unreviewed scope reaches production.
+version: 0.1.0
 ---
 
 # Conducting a Gate

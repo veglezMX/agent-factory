@@ -1,6 +1,11 @@
 ---
 name: authoring-an-agent
 description: Use when adding a new agent to the roster, or when editing an existing agent definition — covers the roster entry, the frontmatter, the fixed section template, the invocation-contract boilerplate, playbook routing, and regeneration. Required before writing any file under .github/agents/, because a definition that diverges from the template is invisible to every convention the rest of the roster relies on.
+version: 0.1.0
+prerequisites:
+  - skill: prompt-anatomy
+    source: https://github.com/veglezMX/veglez-skills
+    when: authoring-time only (writing or restructuring an agent definition)
 ---
 
 # Authoring an Agent
@@ -8,12 +13,19 @@ description: Use when adding a new agent to the roster, or when editing an exist
 ## Overview
 
 An agent in this framework is not a prompt someone wrote — it is a **registered role** with a
-number, a boundary, a declared tool posture, and a place in at least one playbook. Nothing in
-the repository enforces that automatically. The uniformity you see across the 29 existing
-agents is upheld by convention alone, which means a new agent conforms only if its author
+number, a boundary, a declared tool posture, and a place in at least one playbook. The test
+suite (`tests/test_roster.py`, `tests/test_agents.py`, `tests/test_matrix.py`) fails a pull
+request that breaks the mechanical half of that — frontmatter, section order, roster
+agreement, playbook routing. It cannot judge whether the boundary is sound or the prose is
+clear; that half is upheld by convention, which means a new agent conforms only if its author
 knows what the convention *is*.
 
 This skill is that knowledge. Follow it in order; each step depends on the previous one.
+
+**Prerequisite (authoring-time only):** the body sections follow the component structure of
+the `prompt-anatomy` skill, published from
+[`veglezMX/veglez-skills`](https://github.com/veglezMX/veglez-skills). Install it alongside
+this one when you write or restructure an agent. Running a delivery run does not need it.
 
 **Core principle: mirror a sibling, do not compose from scratch.** Pick the existing agent
 closest in posture and phase, and follow its shape. Every deviation you invent is a deviation

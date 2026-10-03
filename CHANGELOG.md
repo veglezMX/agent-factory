@@ -7,7 +7,7 @@ skill/command set; **patch** for documentation and installer fixes.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely.
 `0.1.0` and `0.2.0` were tagged retroactively on the commits that set those versions in
 `plugin.json`; their entries are reconstructed from git history. Every release from `0.3.0`
-on is tagged and published as described in [`docs/RELEASING.md`](docs/RELEASING.md).
+on is tagged and published as described in `docs/RELEASING.md`.
 
 ## [Unreleased]
 
@@ -56,6 +56,24 @@ on is tagged and published as described in [`docs/RELEASING.md`](docs/RELEASING.
 - **`process/advisory-pipeline-usage.md`** and the standalone invocation cheat sheet entry for
   the UI Layout Designer.
 
+- **A test suite that machine-enforces the repository's invariants** (`tests/`, run by
+  `pytest`): roster ↔ agent files, posture ↔ `tools:`, the agent section template, playbook
+  frontmatter and sections, the case × agent matrix in both directions, closed skill
+  frontmatter, commands, manifest counts and versions, CHANGELOG shape, relative links and
+  protocol/contract section citations, derived-directory sync, and harness neutrality.
+  `CONTRIBUTING.md` used to call these "review-time checks"; review missed them.
+- **`tools/check_versions.py`** — the bump-on-change gate. R1: a changed skill must raise its
+  `version:`. R2: a change to distributed content must come with a `CHANGELOG.md` entry.
+- **Per-skill versions.** Every `SKILL.md` carries `version:` (all start at `0.1.0`), and the
+  skill frontmatter is closed at `name`, `description`, `version`, `prerequisites`.
+- **`prompt-anatomy` declared as a prerequisite** of `authoring-an-agent` (frontmatter and
+  prose): an authoring-time dependency on `veglezMX/veglez-skills` that was previously named
+  without saying where it comes from.
+- **`ci` workflow** (renamed from `derived dirs`): ruff, shellcheck, the derived-directory
+  check, the version gate, pyright, and the test suite, on pushes to `main`/`dev` and on
+  every pull request. Python tooling (`pyproject.toml`, `uv.lock`, `justfile`) is dev-only;
+  nothing Python ships.
+
 ### Fixed
 
 - **Manifest descriptions disagreed.** `marketplace.json` claimed five skills and both
@@ -73,6 +91,15 @@ on is tagged and published as described in [`docs/RELEASING.md`](docs/RELEASING.
   `PORTABILITY.md` described skill support on Copilot and Cursor incorrectly.
 - The packet template's traceability appendix named no consumer for agents 03, 08, 09, and
   21–29. Every roster agent now appears.
+- **Tool postures contradicted each other.** Five roster entries used postures outside the
+  five-token legend (`R (+docs)`, `R, E on request`) while their `tools:` granted `edit`;
+  `process/standalone-invocation.md` defined three postures and labelled every `E+T` agent
+  `E`. Every roster posture is now one legend token — the one its `tools:` line grants — with
+  any narrowing stated as a parenthetical, and `tests/test_roster.py` derives and checks it.
+- **The Code Reviewer's routing exception was contradicted.** The roster said 18 may call
+  exactly 15 and 08, yet listed it (and the CI/CD Engineer, which has no `agent` tool) as a
+  caller of 22 and 27. Those now recommend; the Orchestrator routes.
+- `creating-stakeholder-packet` named a Claude-only tool; it now describes the capability.
 - `CHANGELOG.md` recorded work under `0.1.0` that landed later, and gave the matrix as 261
   cells (it is 290).
 
@@ -186,3 +213,7 @@ First packaged release (`2c0dc9b`, tagged retroactively).
 - `README.md` and `PORTABILITY.md`.
 - One worked example and one real run workspace, `runs/2026-06-comedor-vecinal/`, live
   through Phase 0.
+
+[Unreleased]: https://github.com/veglezMX/agent-factory/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/veglezMX/agent-factory/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/veglezMX/agent-factory/releases/tag/v0.1.0

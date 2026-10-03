@@ -1,0 +1,57 @@
+name: ci
+
+# The gates every change must pass (docs/RELEASING.md, "Gates"). Each step fails
+# independently with a nameable cause:
+#   derived dirs  — .github/ edited without `scripts/install.sh --target repo`
+#   versions      — a skill changed without a version bump, or content without a CHANGELOG entry
+#   tests         — a repository invariant broke (roster, matrix, manifests, installer, docs)
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # check_versions.py diffs against the base revision
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dev tooling
+        run: |
+          uv sync --locked
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+
+      - name: Lint (ruff, shellcheck)
+        run: |
+          uv run ruff check tools tests
+          uv run ruff format --check tools tests
+          shellcheck -S warning scripts/install.sh
+
+      - name: Derived directories are in sync with .github/
+        run: scripts/install.sh --target repo --check
+
+      - name: Version bump and changelog (R1, R2)
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: uv run python tools/check_versions.py --base "$BASE"
+
+      - name: Type check
+        run: uv run pyright
+
+      - name: Invariant suite
+        run: uv run pytest

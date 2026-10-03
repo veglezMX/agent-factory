@@ -1,6 +1,7 @@
 ---
 name: resuming-a-run
 description: Use when picking up a delivery run whose context you do not have — a run halted at a gate, a run someone else started, a run from last month, or any cold session where the next step must be determined from disk rather than from chat history. Also use before opening a new run, to prove the previous one is actually closed. Operationalises the handoff protocol's statelessness property.
+version: 0.1.0
 ---
 
 # Resuming a Run

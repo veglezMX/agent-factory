@@ -1,6 +1,7 @@
 ---
 name: routing-a-step
 description: Use when a delivery run must advance one step on a platform where the Delivery Orchestrator cannot dispatch other agents itself — Cursor, Codex, Hermes, a Copilot or Roo build without agent-to-agent support, or any harness where you are the transport between agents. Turns "where the run stands" into the exact inbound handoff and the paste-ready invocation for the next agent. Also use to keep each step in its own clean context.
+version: 0.1.0
 ---
 
 # Routing a Step

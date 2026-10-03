@@ -32,12 +32,12 @@ product code, which this pipeline never does.
 
 | Agent | Roster posture | Writes its own output file? |
 |---|---|---|
-| `requirements-analyst` (analysis mode) | `R` (+docs) | **Yes** — via its docs-write grant |
-| `security-engineer` (review mode) | `R`, `E` on request | **Yes** — on-request edit grant (see below) |
-| `privacy-compliance-officer` (review mode) | `R`, `E` on request | **Yes** — on-request edit grant (see below) |
-| `accessibility-auditor` (review mode) | `R`, `E` on request | **Yes** — on-request edit grant (see below) |
+| `requirements-analyst` (analysis mode) | `E` (own docs only) | **Yes** — via its docs-write grant |
+| `security-engineer` (review mode) | `E` (read-only by default; edits on request) | **Yes** — on-request edit grant (see below) |
+| `privacy-compliance-officer` (review mode) | `E` (read-only by default; edits on request) | **Yes** — on-request edit grant (see below) |
+| `accessibility-auditor` (review mode) | `E` (read-only by default; edits on request) | **Yes** — on-request edit grant (see below) |
 | `architecture-guardian` | `R` | No — **you** write it |
-| `code-reviewer` | `R` | No — **you** write it |
+| `code-reviewer` | `R+route` | No — **you** write it |
 | `infrastructure-guardian` | `R` | No — **you** write it |
 
 These agents are **read-only by default** (`process/agent-roster.md`). The four in the top
