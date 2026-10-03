@@ -14,6 +14,15 @@ win (they are append-only; `state.md` is a hand-maintained digest that can lag).
 
 If `runs/$1/` does not exist, list the run directories that do and stop.
 
+## Framework docs (precheck)
+
+Every `process/…` and `templates/…` path in this command resolves from the project root first,
+then from `.agents-factory/` in the project, then from `~/.agents-factory/` (or
+`$AGENTS_FACTORY_HOME`). Find `process/agent-handoff-protocol.md` in one of those before
+anything else. If none has it, stop and tell the human to install the framework docs —
+`scripts/install.sh --target docs` from an agents-factory checkout, or re-run their platform
+install — and do not proceed from memory of what the documents say.
+
 ## What to read
 
 1. `runs/$1/state.md` — the digest. Treat as a claim to verify.

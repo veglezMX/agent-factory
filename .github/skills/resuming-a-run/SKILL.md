@@ -35,6 +35,15 @@ all (`agent-invocation-contract.md` §4).
 
 ---
 
+## Framework docs (precheck)
+
+Every `process/…` and `templates/…` path in this skill resolves from the project root first,
+then from `.agents-factory/` in the project, then from `~/.agents-factory/` (or
+`$AGENTS_FACTORY_HOME`). Find `process/agent-handoff-protocol.md` in one of those before
+anything else. If none has it, stop and tell the human to install the framework docs —
+`scripts/install.sh --target docs` from an agents-factory checkout, or re-run their platform
+install — and do not proceed from memory of what the documents say.
+
 ## Step 1 — Read `state.md` first
 
 `runs/<run-id>/state.md` is the Orchestrator-owned digest, kept under ~100 lines. It is a

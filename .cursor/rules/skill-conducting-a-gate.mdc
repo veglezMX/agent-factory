@@ -33,6 +33,7 @@ and no agent may proceed past one on its own authority.
 `defect` case's reproduction sign-off, for example. Those are confirmations, not gates, and
 they produce no record.
 
+---
 
 ## Step 1 — Identify which gate, and which variant
 
@@ -132,6 +133,7 @@ Three rules that get broken under time pressure:
 - **A request too large for an amendment queues as the next increment run** (§6.6). "Too large"
   is a judgement the approver makes, not the implementer.
 
+---
 
 ## What a gate is not
 

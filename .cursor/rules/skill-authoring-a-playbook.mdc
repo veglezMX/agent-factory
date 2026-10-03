@@ -34,6 +34,7 @@ the matrix. The roster and the protocol never change to add a case.
 **Do NOT use for:** adding an *agent* (use `authoring-an-agent`; the roster gets the agent
 first, as its own change, and only then does a playbook reference it).
 
+---
 
 ## Step 1 — Establish that it is a distinct case
 
@@ -53,6 +54,7 @@ lived that way legitimately until its divergence justified promotion.
 Every field is required. `playbook-schema.md` §1 is authoritative; this is its working form:
 
 ```yaml
+---
 case: <slug>                    # unique; equals the filename stem AND the matrix column
 name: <Human Title>
 trigger: <the artifact or event that starts a run of this case>
@@ -64,6 +66,7 @@ gates: [scope, design, release] # ordered slugs; [] if the case has none
 baseline: produces              # produces | consumes | none
 closure: >                      # one line: what makes a run of this case done
   <traceable to handoff-protocol §6.1 or a documented variant>
+---
 ```
 
 Field rules that carry real weight:
@@ -149,6 +152,7 @@ you push.
 Finally, bump the case count in `README.md` (e.g. "10 cases" → "11 cases") and add the case to the
 list in the "What's covered" section.
 
+---
 
 ## Hard rules (`playbook-schema.md` §3)
 

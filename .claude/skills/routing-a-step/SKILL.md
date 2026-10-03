@@ -40,6 +40,15 @@ stops being resumable and the whole audit chain is fiction.
 
 ---
 
+## Framework docs (precheck)
+
+Every `process/…` and `templates/…` path in this skill resolves from the project root first,
+then from `.agents-factory/` in the project, then from `~/.agents-factory/` (or
+`$AGENTS_FACTORY_HOME`). Find `process/agent-handoff-protocol.md` in one of those before
+anything else. If none has it, stop and tell the human to install the framework docs —
+`scripts/install.sh --target docs` from an agents-factory checkout, or re-run their platform
+install — and do not proceed from memory of what the documents say.
+
 ## Step 1 — Establish the position
 
 You need four facts before choosing anything. All four come from disk.

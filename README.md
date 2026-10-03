@@ -81,6 +81,9 @@ scripts/install.sh --target hermes    # add --scope project --path <dir> for a r
 # Generic ".agents" harness — one custom-mode YAML per agent -> ~/.agents/
 scripts/install.sh --target agents    # add --scope project --path <dir> for one project
 
+# Framework docs only (process/ + templates/) — what a plugin install needs alongside it
+scripts/install.sh --target docs      # add --scope project --path <dir> for <dir>/.agents-factory
+
 # Claude Code marketplace plugin — regenerates this repo's root agents/ skills/ commands/
 scripts/install.sh --target plugin
 
@@ -88,7 +91,7 @@ scripts/install.sh --target plugin
 scripts/install.sh --target repo
 ```
 
-A global install needs nothing copied — every project picks up `~/.claude` (or `~/.cursor`) automatically. For a **project-scoped** install, also copy `process/` and `templates/` into that project. See [PORTABILITY.md](PORTABILITY.md) for exactly which folders each platform needs.
+Nothing needs copying by hand. Every agent reads the framework docs (`process/`, `templates/`) at run time, so each install also puts them where the agents look: `~/.agents-factory/` for a global install, `<dir>/.agents-factory/` for a project one. A project's own `process/` at its root takes precedence. See [PORTABILITY.md § Framework docs](PORTABILITY.md#framework-docs).
 
 ### 2. Create the packet
 
@@ -145,6 +148,8 @@ The roster also ships as a **Claude Code marketplace plugin** — the repo is bo
 
 Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace and plugin are both named `agents-factory` (the `<plugin>@<marketplace>` key).
 
+**The plugin ships agents, skills, and commands, not the framework docs they read.** Once per machine, from a clone of this repo, run `scripts/install.sh --target docs` (or `--target docs --scope project --path <dir>`). Without it, `/run-delivery` stops at its precheck and tells you to.
+
 ---
 
 ## What's covered
@@ -164,10 +169,11 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 - **Gates need a human.** Runs halt for sign-off by design; a stalled-looking run waiting at a gate is the framework working as intended, not a failure to recover from.
 - **`runs/` is the state store.** Keep it in the repo (or a sibling repo for pre-repo phases). Statelessness depends on it.
 - **This repo ships one real run workspace.** `runs/2026-06-comedor-vecinal/` is committed on purpose, as reference material for what a live run looks like on disk — it is the artifact the worked example links. It is also the largest non-agent payload here and it downloads with the plugin. Delete the directory if you install the roster into a project and want it gone; nothing depends on it at runtime. Note that it was executed against the 20-agent roster and does not conform to today's `greenfield` playbook — see the callout in [`process/examples/comedor-greenfield.md`](process/examples/comedor-greenfield.md).
+- **Authoring a new agent expects `prompt-anatomy`.** Agent bodies follow the component structure of the `prompt-anatomy` skill from [`veglezMX/veglez-skills`](https://github.com/veglezMX/veglez-skills). Install it when you write or restructure an agent; running a delivery run does not need it.
 - **No language/stack is assumed.** Agents adapt to your stack via the packet and design; nothing here is tied to a framework.
 
 ---
 
 ## Extending it
 
-Adding an agent or a case is a drop-in — see the conformance rules in [`process/agent-roster.md`](process/agent-roster.md), [`process/agent-invocation-contract.md`](process/agent-invocation-contract.md), [`process/playbooks/playbook-schema.md`](process/playbooks/playbook-schema.md), and the handoff [conformance checklist](process/agent-handoff-protocol.md). Agents follow the `prompt-anatomy` component structure; mirror an existing sibling of the same tool posture.
+Adding an agent or a case is a drop-in — see the conformance rules in [`process/agent-roster.md`](process/agent-roster.md), [`process/agent-invocation-contract.md`](process/agent-invocation-contract.md), [`process/playbooks/playbook-schema.md`](process/playbooks/playbook-schema.md), and the handoff [conformance checklist](process/agent-handoff-protocol.md). Agents follow the component structure of the `prompt-anatomy` skill ([`veglezMX/veglez-skills`](https://github.com/veglezMX/veglez-skills), an authoring-time dependency); mirror an existing sibling of the same tool posture. The test suite (`tests/`) checks the mechanical rules on every pull request — see [CONTRIBUTING.md](CONTRIBUTING.md).
