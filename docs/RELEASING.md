@@ -72,8 +72,8 @@ that invalidates how the skill was used before.
 ## 3. Branches
 
 ```text
-feature/*  fix/*  docs/*  chore/*        short-lived; one concern each
-        │  PR (squash or merge)
+feature/*  fix/*  docs/*  chore/*        optional, short-lived; one concern each
+        │  PR (squash or merge) — or commit directly to dev
         ▼
        dev ─────────────────────────────  integration branch; always green
         │  release/vX.Y.Z  (cut from dev)
@@ -83,8 +83,9 @@ feature/*  fix/*  docs/*  chore/*        short-lived; one concern each
         │  hotfix/vX.Y.Z  (cut from main) — PR into main, then back-merged into dev
 ```
 
-- **`dev`** is where work lands. Every pull request targets `dev` unless it is a release or
-  hotfix. `dev` is always releasable: CI must be green to merge.
+- **`dev`** is where work lands, by direct commit or by pull request. Every pull request
+  targets `dev` unless it is a release or hotfix. Keep `dev` releasable: run the gates before
+  pushing, and when CI on `dev` turns red, fixing it comes before anything else lands.
 - **`main`** only receives release and hotfix branches, through a pull request merged with a
   **merge commit** (not squash), so the tag points at a commit whose history contains every
   change it releases.
@@ -94,9 +95,9 @@ feature/*  fix/*  docs/*  chore/*        short-lived; one concern each
   commits.
 
 **Recommended branch protection** (set by a repository owner in GitHub settings — it cannot
-be configured from the repository itself): on `main` and `dev`, require a pull request,
-require the `ci / check` status to pass, and block force-pushes and deletion. On `main`,
-also restrict who can push to maintainers.
+be configured from the repository itself): on `main`, require a pull request, require the
+`ci / check` status to pass, block force-pushes and deletion, and restrict who can push to
+maintainers. On `dev`, block force-pushes and deletion only; direct pushes are allowed.
 
 ---
 

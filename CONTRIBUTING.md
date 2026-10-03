@@ -65,8 +65,10 @@ No `just`? Each recipe is one line in [`justfile`](justfile); run it directly, e
 
 ### Branches
 
-Work branches off **`dev`** and comes back to it through a pull request. `main` only
-receives release and hotfix merges (see [RELEASING.md §3](docs/RELEASING.md#3-branches)).
+Work lands on **`dev`**, either as direct commits or through a pull request from a
+short-lived branch. Use a branch when a change should be reviewed before it lands. `main`
+only receives release and hotfix merges; never commit to it directly (see
+[RELEASING.md §3](docs/RELEASING.md#3-branches)).
 
 | Branch | For |
 |---|---|

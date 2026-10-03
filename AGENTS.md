@@ -15,8 +15,9 @@ Code, Codex, Copilot, Cursor, Zoo/Roo, Hermes, …). Human contributors follow
   playbook, or roster entry usually moves a count or a cross-reference elsewhere.
 - Editing under `.github/agents/` → follow the `authoring-an-agent` skill.
   Editing under `process/playbooks/` → follow the `authoring-a-playbook` skill.
-- Work on a branch off `dev` (`feature/…`, `fix/…`, `docs/…`, `chore/…`), unless your task
-  names another branch. Never commit directly to `main` or `dev`.
+- Work on `dev`: commit to it directly, or use a short-lived branch off it (`feature/…`,
+  `fix/…`, `docs/…`, `chore/…`) when a change should go through a pull request. Never commit
+  directly to `main`; it only receives release and hotfix merges.
 
 ## Hard rules
 
