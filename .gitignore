@@ -18,11 +18,12 @@
 
 # --- Ordinary ignores ----------------------------------------------------------
 # Tool caches that other projects' tooling can drop here. There is no Python,
-# Node, or compiled code in this repository; these are strictly cruft.
+# Node, or compiled code that ships; the Python under tools/ and tests/ is dev tooling.
 .ruff_cache/
 .mypy_cache/
 .pytest_cache/
 __pycache__/
+.venv/
 node_modules/
 
 # Editor and OS noise

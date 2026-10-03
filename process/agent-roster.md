@@ -30,6 +30,8 @@ Every agent is described with exactly four facts:
 | `E+T` | Edit + terminal. Everything in `E`, plus running commands (tests, builds, generators). | `E` + `execute`, `todo` |
 | `O` | Orchestration-only. Invokes other agents and reads run state; never edits files. | `read`, `search`, `agent`, `todo` |
 
+**One token per agent.** The overview's Posture column always opens with exactly one legend token, and that token is what the agent's `tools:` line grants — `tests/test_roster.py` derives the posture from `tools:` and fails on disagreement. A parenthetical after the token narrows *how* the grant is used ("own docs only", "read-only by default; edits on request"); it never widens it, and a narrowing is enforced by the agent's Scope & Boundaries, not by the harness.
+
 Two postures exist only because a single agent needs them: `R+route` is the Code Reviewer (18), whose `agent` grant is scoped to forwarding findings to the Security Engineer and the Architecture Guardian; `O` is the Delivery Orchestrator (01), which additionally reads and tracks run state. Any other agent carrying `agent` in its tool list is a conformance error.
 
 Tool names vary by editor and extension version; the posture is the contract, the tool list is a suggestion. Where a definition does list tool ids, they appear in one canonical order — `read`, `search`, `web`, `edit`, `execute`, `agent`, `todo` — so that two agents with the same capability set are byte-identical on that line and the generated per-platform tool lists match. See `../PORTABILITY.md` for the posture → platform tool-name mapping.
@@ -47,32 +49,32 @@ Tool names vary by editor and extension version; the posture is the contract, th
 | # | Agent | Phase | Posture | Called by | May call |
 |---|---|---|---|---|---|
 | 01 | Delivery Orchestrator | All | `O` | Human | All agents |
-| 02 | Requirements Analyst | 0 — Discovery | `R` (+docs) | Orchestrator, Human | None |
+| 02 | Requirements Analyst | 0 — Discovery | `E` (own docs only) | Orchestrator, Human | None |
 | 03 | UX Flow Designer | 0 — Discovery | `E` (docs only) | Orchestrator | None |
 | 04 | Solution Designer | 0 — Design | `E` (docs only) | Orchestrator | None |
 | 05 | Bundle Compiler | 0 — Design | `E` | Orchestrator | None |
 | 06 | Bundle Intake Validator | 1 — Intake | `R` | Orchestrator | None |
 | 07 | Product Planner | 1 — Intake | `R` | Orchestrator, Human | None |
-| 08 | Architecture Guardian | Cross-cutting | `R` | Orchestrator, any reviewer | None |
+| 08 | Architecture Guardian | Cross-cutting | `R` | Orchestrator, Code Reviewer | None |
 | 09 | Foundation Engineer | 2 — Build | `E+T` | Orchestrator | None |
 | 10 | Contract & Client Guardian | 2 — Build | `E+T` | Orchestrator | None |
 | 11 | Data & Migration Engineer | 2 — Build | `E+T` | Orchestrator | None |
 | 12 | Integration Engineer | 2 — Build | `E+T` | Orchestrator | None |
 | 13 | Backend Domain Implementer | 2 — Build | `E+T` | Orchestrator | None |
 | 14 | Frontend Feature Builder | 2 — Build | `E+T` | Orchestrator | None |
-| 15 | Security Engineer | Cross-cutting | `R`, `E` on request | Orchestrator, Code Reviewer | None |
+| 15 | Security Engineer | Cross-cutting | `E` (read-only by default; edits on request) | Orchestrator, Code Reviewer | None |
 | 16 | Observability Engineer | 3 — Hardening | `E+T` | Orchestrator | None |
 | 17 | Validation & Test Engineer | 3 — Hardening | `E+T` | Orchestrator | None |
 | 18 | Code Reviewer | 3 — Hardening | `R+route` | Orchestrator | Security Engineer, Architecture Guardian (routing only) |
 | 19 | CI/CD & Deployment Engineer | 4 — Delivery | `E+T` | Orchestrator | None |
 | 20 | Documentation & Runbook Writer | 4 — Delivery | `E` (docs only) | Orchestrator | None |
 | 21 | Infrastructure & Platform Engineer | 4 — Delivery (provisioning) | `E+T` | Orchestrator | None |
-| 22 | Infrastructure Guardian | Cross-cutting | `R` | Orchestrator, CI/CD & Deployment Engineer, Code Reviewer | None |
+| 22 | Infrastructure Guardian | Cross-cutting | `R` | Orchestrator | None |
 | 23 | Performance & Load Engineer | Cross-cutting / 3 — Hardening | `E+T` | Orchestrator | None |
 | 24 | Visual & Design-System Designer | 0 — Discovery & Design | `E` (docs only) | Orchestrator | None |
 | 25 | AI & Prompt Engineer | 2 — Build (conditional) | `E+T` | Orchestrator | None |
-| 26 | Privacy & Compliance Officer | Cross-cutting (conditional) | `R`, `E` on request | Orchestrator | None |
-| 27 | Accessibility Auditor | Cross-cutting (UI-gated) | `R`, `E` on request | Orchestrator, Code Reviewer | None |
+| 26 | Privacy & Compliance Officer | Cross-cutting (conditional) | `E` (read-only by default; edits on request) | Orchestrator | None |
+| 27 | Accessibility Auditor | Cross-cutting (UI-gated) | `E` (read-only by default; edits on request) | Orchestrator | None |
 | 28 | Product Analytics & Instrumentation Engineer | 3 — Hardening | `E+T` | Orchestrator | None |
 | 29 | UI Layout Designer | 0 — Design / 3 — Fidelity Review | `E+T` (`design`/`review` read-only; explicit `apply`) | Orchestrator | None |
 
@@ -100,7 +102,7 @@ These agents convert non-technical stakeholder input into the technical task bun
 
 **Scope:** Owns the structured requirements document, the glossary, and the open-questions list. Never designs architecture, never selects technology, never writes tasks or code, never silently fills a gap in the packet.
 
-**Tools:** `R`, plus write access limited to its own output documents (requirements doc, glossary, questions file).
+**Tools:** `E`, restricted to its own output documents (requirements doc, glossary, questions file). It reads like an `R` agent everywhere else.
 
 **Invocation:** Called by the Orchestrator at run start; also directly by a human iterating on a packet before a run. Calls no one. User-invocable: **yes**.
 
@@ -244,7 +246,7 @@ All build agents share two universal boundaries: in pipeline mode they work from
 
 **Scope:** Owns the security policy artifacts, the permission matrix, and security findings by severity. Never weakens a gate for convenience, never stores secrets in code, never approves broad permissions without packet-traceable justification.
 
-**Tools:** `R` by default; `E` only under an explicit implementation task.
+**Tools:** `E`, used as `R` by default; it edits only under an explicit implementation task.
 
 **Invocation:** Called by the Orchestrator at fixed checkpoints (after identity/auth work, after integrations, pre-release) and by the Code Reviewer when a diff touches the sensitive-areas list. Calls no one. User-invocable: **yes**.
 
@@ -326,7 +328,7 @@ These agents extend the core roster for cloud provisioning, infrastructure revie
 
 **Tools:** `R`. Read and search only — inspects IaC sources, plan/change-set output, manifests, IAM/network/state config; executes nothing.
 
-**Invocation:** Called by the Orchestrator at provisioning checkpoints, and by the CI/CD & Deployment Engineer or the Code Reviewer when a diff touches IaC. Calls no one; recommends a remediating agent (usually the Infrastructure & Platform Engineer, or the CI/CD & Deployment Engineer for pipeline issues) and hands back to the Orchestrator. User-invocable: **yes** (e.g., to review a `terraform plan` before an apply).
+**Invocation:** Called by the Orchestrator at provisioning checkpoints, and whenever the CI/CD & Deployment Engineer or the Code Reviewer recommends it because a diff touches IaC (they recommend; the Orchestrator routes). Calls no one; recommends a remediating agent (usually the Infrastructure & Platform Engineer, or the CI/CD & Deployment Engineer for pipeline issues) and hands back to the Orchestrator. User-invocable: **yes** (e.g., to review a `terraform plan` before an apply).
 
 ### 23 — Performance & Load Engineer
 
@@ -364,7 +366,7 @@ These agents extend the core roster for cloud provisioning, infrastructure revie
 
 **Scope:** Owns compliance findings by severity, the personal-data obligations assessment, and (when tasked) compliance artifacts such as the data-retention policy, RoPA, data-subject-rights procedure, and DPIA determination record. Never weakens a legal control for convenience, never approves processing without a packet-traceable lawful basis, never approves retention beyond §9 or residency/processor exposure the packet forbids, never edits application code or files outside an explicit authoring task, and never substitutes for the Security Engineer's review.
 
-**Tools:** `R` by default; `E` only under an explicit authoring task.
+**Tools:** `E`, used as `R` by default; it edits only under an explicit authoring task.
 
 **Invocation:** Called by the Orchestrator, conditionally, at fixed checkpoints for regulated or PII-heavy domains (after data design, after each integration that touches personal data, pre-release) and ad hoc when a change touches personal-data handling. Calls no one; recommends a remediating agent (11 for retention/deletion, 12 for processor exposure, 13 for rights endpoints/audit-as-record, 15 for attack-surface findings) and hands back to 01. User-invocable: **yes**.
 
@@ -374,7 +376,7 @@ These agents extend the core roster for cloud provisioning, infrastructure revie
 
 **Scope:** Owns accessibility findings by severity (written to `runs/<run-id>/findings/accessibility/`), the WCAG conformance verdict on every reviewed design spec or UI diff, and (when tasked) a named accessibility conformance artifact. Never implements components or stylesheets (that is the Frontend Feature Builder 14, which it reviews), never defines flows, screens, or route states (UX Flow Designer 03), never defines design tokens or component visual specs (Visual & Design-System Designer 24, which it reviews), never weakens or quietly lowers an accessibility requirement set by packet §10, never approves accessibility behavior untraceable to packet §10 (or §12/§3/§13), never edits any file outside an explicit authoring task, never invokes another specialist. Traces decisions to packet §10 (Languages, Branding & Accessibility), with §12 (Devices & Channels — responsive/zoom/touch-target/orientation), §3 (User Journeys — keyboard & screen-reader completion), and §13 (Acceptance Examples — when accessibility is an acceptance condition).
 
-**Tools:** `R` by default; `E` only under an explicit authoring task.
+**Tools:** `E`, used as `R` by default; it edits only under an explicit authoring task.
 
 **Invocation:** Pipeline: reviews agents 24/03/29 at the design gate and agent 14 during Hardening/pre-release. Standalone: directly audits a bounded screen/layout/diff or authors a named accessibility artifact. Calls no one.
 

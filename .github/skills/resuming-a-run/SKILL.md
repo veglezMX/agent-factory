@@ -1,6 +1,7 @@
 ---
 name: resuming-a-run
 description: Use when picking up a delivery run whose context you do not have — a run halted at a gate, a run someone else started, a run from last month, or any cold session where the next step must be determined from disk rather than from chat history. Also use before opening a new run, to prove the previous one is actually closed. Operationalises the handoff protocol's statelessness property.
+version: 0.1.0
 ---
 
 # Resuming a Run
@@ -33,6 +34,15 @@ deficient — not a reason to reconstruct it from memory.
 all (`agent-invocation-contract.md` §4).
 
 ---
+
+## Framework docs (precheck)
+
+Every `process/…` and `templates/…` path in this skill resolves from the project root first,
+then from `.agents-factory/` in the project, then from `~/.agents-factory/` (or
+`$AGENTS_FACTORY_HOME`). Find `process/agent-handoff-protocol.md` in one of those before
+anything else. If none has it, stop and tell the human to install the framework docs —
+`scripts/install.sh --target docs` from an agents-factory checkout, or re-run their platform
+install — and do not proceed from memory of what the documents say.
 
 ## Step 1 — Read `state.md` first
 

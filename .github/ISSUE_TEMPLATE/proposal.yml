@@ -1,0 +1,37 @@
+name: Proposal
+description: Propose a new agent, case (playbook), skill, command, or install target — or a change to a contract.
+labels: [proposal]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - New agent
+        - New case / playbook
+        - New skill
+        - New command
+        - New install target
+        - Change to a contract (handoff protocol, invocation contract, schemas)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can't be done well today? For a new agent, which existing agent's boundary does it not fit?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: For an agent, give the four roster facts (Does / Scope / Tools posture / Invocation). For a case, its trigger and entry criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Compatibility
+      description: Does this change the public interface (docs/RELEASING.md §2)? Who would have to adapt?

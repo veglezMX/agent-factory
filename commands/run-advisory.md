@@ -14,6 +14,15 @@ This is the advisory path. It is **not** a delivery run — it builds nothing. F
 software use `/run-delivery` (the `runs/` machinery). Design and rationale:
 `process/proposals/advisory-pipeline.md`; user guide: `process/advisory-pipeline-usage.md`.
 
+## Framework docs (precheck)
+
+Every `process/…` and `templates/…` path in this command resolves from the project root first,
+then from `.agents-factory/` in the project, then from `~/.agents-factory/` (or
+`$AGENTS_FACTORY_HOME`). Find `process/agent-handoff-protocol.md` in one of those before
+anything else. If none has it, stop and tell the human to install the framework docs —
+`scripts/install.sh --target docs` from an agents-factory checkout, or re-run their platform
+install — and do not proceed from memory of what the documents say.
+
 ## Inputs
 
 - **`$ARGUMENTS`** — a free-text topic/query, optionally followed by a comma- or
@@ -32,12 +41,12 @@ product code, which this pipeline never does.
 
 | Agent | Roster posture | Writes its own output file? |
 |---|---|---|
-| `requirements-analyst` (analysis mode) | `R` (+docs) | **Yes** — via its docs-write grant |
-| `security-engineer` (review mode) | `R`, `E` on request | **Yes** — on-request edit grant (see below) |
-| `privacy-compliance-officer` (review mode) | `R`, `E` on request | **Yes** — on-request edit grant (see below) |
-| `accessibility-auditor` (review mode) | `R`, `E` on request | **Yes** — on-request edit grant (see below) |
+| `requirements-analyst` (analysis mode) | `E` (own docs only) | **Yes** — via its docs-write grant |
+| `security-engineer` (review mode) | `E` (read-only by default; edits on request) | **Yes** — on-request edit grant (see below) |
+| `privacy-compliance-officer` (review mode) | `E` (read-only by default; edits on request) | **Yes** — on-request edit grant (see below) |
+| `accessibility-auditor` (review mode) | `E` (read-only by default; edits on request) | **Yes** — on-request edit grant (see below) |
 | `architecture-guardian` | `R` | No — **you** write it |
-| `code-reviewer` | `R` | No — **you** write it |
+| `code-reviewer` | `R+route` | No — **you** write it |
 | `infrastructure-guardian` | `R` | No — **you** write it |
 
 These agents are **read-only by default** (`process/agent-roster.md`). The four in the top

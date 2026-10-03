@@ -1,0 +1,38 @@
+# Tooling only. agents-factory ships prose; nothing here is packaged or published,
+# and no contributor needs Python to edit an agent, a skill, or a playbook — CI runs
+# the gates. See CONTRIBUTING.md and docs/RELEASING.md.
+[project]
+name = "agents-factory-tooling"
+version = "0.0.0"
+description = "Test and release tooling for the agents-factory repository (not distributed)."
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "pyyaml>=6",
+  "ruff>=0.6",
+  "pyright>=1.1.380",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+include = ["tools/**/*.py", "tests/**/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+
+[tool.pyright]
+include = ["tools", "tests"]
+extraPaths = ["tools", "tests"]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"

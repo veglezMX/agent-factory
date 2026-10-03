@@ -110,7 +110,7 @@ Each step names what the agent receives and produces *in this case*. Agent scope
 ### Phase 1 — Parity baseline
 
 5. **Validation & Test Engineer — capture (`17`).** Receives the restructure plan and the canonical acceptance examples/journeys/contracts. **Before any code moves**, produces or confirms a **characterization test suite** that pins current externally observable behavior — invariants, contract tests, route-state and E2E behavior, the packet's acceptance examples executed literally. Any currently-untested behavior in the blast radius gets a new pinning test now. The whole suite is run against the *unchanged* code and recorded **all green (pre)** — this snapshot is the parity contract.
-   - **`[H]` GATE B (baseline) — Behavior-parity.** Case-specific gate; intent: accept the captured pre-change green suite as the binding definition of "unchanged behavior." This gate relies on a handoff-protocol **§3.4 case-specific-gate** definition (the orchestrator adds that section). Without an accepted pre-change baseline, the restructure has nothing to prove against and must not begin.
+   - **`[H]` GATE B (baseline) — Behavior-parity.** Case-specific gate; intent: accept the captured pre-change green suite as the binding definition of "unchanged behavior." This gate relies on a handoff-protocol **§3.4 case-specific-gate** definition. Without an accepted pre-change baseline, the restructure has nothing to prove against and must not begin.
 
 ### Phase 2 — Restructure
 

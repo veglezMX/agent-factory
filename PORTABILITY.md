@@ -7,7 +7,7 @@ This framework is authored once and run on several AI coding platforms. This doc
 | Layer | Portable? | Notes |
 |---|---|---|
 | **Process spine** (`process/`, `templates/`) | ✅ Fully | Plain Markdown the agents read. Copy verbatim. |
-| **Skills** (`SKILL.md` + references) | ⚠️ Format portable | The `name` + `description` frontmatter is the Anthropic skill format (native on Claude Code). Copilot/Cursor need it as a prompt or manual invoke. |
+| **Skills** (`SKILL.md` + references) | ⚠️ Format portable | The `name` + `description` frontmatter is the Agent Skills format: native on Claude Code, Copilot, Codex, and Hermes. Cursor has no skills runtime, so the installer ships each skill as an `@`-mentionable rule. |
 | **Agent definitions** (bodies) | ✅ The prose is | Role, boundaries, output contract, etc. are platform-neutral. |
 | **Agent `tools:` frontmatter** | ❌ Platform-specific | `["read","search","edit","execute"]` are VS Code tool ids. Claude Code uses `Read, Grep, Glob, Edit, Bash`. The **posture** (R/E/E+T/O) is the contract; the literal list is not. |
 | **Agent directory + filename** | ❌ Platform-specific | `.github/agents/*.agent.md` (Copilot) vs `.claude/agents/*.md` (Claude) vs `.cursor/rules/*.mdc` (Cursor). |
@@ -26,7 +26,7 @@ This framework is authored once and run on several AI coding platforms. This doc
 | Commands | `.claude/commands/*.md` *(generated)* | `.github/commands/*.md` *(source of truth)* | n/a | n/a | n/a |
 | Orchestrator start | `/run-delivery <run-id>` (main loop) | invoke `delivery-orchestrator` agent | drive in main chat | switch to the `delivery-orchestrator` mode | switch to the `delivery-orchestrator` mode |
 | Pipeline run state | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` | `runs/<run-id>/` |
-| Process docs | `process/`, `templates/` | same | same | same | same |
+| Process docs | `process/`, `templates/` — installed automatically (see [Framework docs](#framework-docs)) | same | same | same | same |
 
 **Skill-shaped platforms** — OpenAI Codex and Hermes Agent have no per-agent definition format at all, only a skills runtime. Each agent therefore ships *as a skill*:
 
@@ -38,6 +38,32 @@ This framework is authored once and run on several AI coding platforms. This doc
 | Orchestrator start | load the `delivery-orchestrator` skill in the main session | load the `delivery-orchestrator` skill in the main session |
 | Tool posture | not enforceable per agent — carried as prose + a session sandbox flag | not enforceable per agent — carried as prose + a session flag |
 
+## Framework docs
+
+Every agent, command, and run skill cites `process/…` (roster, invocation contract, handoff
+protocol, playbooks) and `templates/…` (the packet template). Those are plain Markdown and are
+read at run time, so they must be reachable from wherever the agent runs. The installer puts
+them there; you do not copy anything by hand.
+
+| Install | Where the docs land |
+|---|---|
+| Any platform target, global (the default) | `$AGENTS_FACTORY_HOME`, default `~/.agents-factory/{process,templates}` |
+| Any platform target, `--scope project --path <dir>` | `<dir>/.agents-factory/{process,templates}` |
+| Claude Code plugin (`/plugin install`) | nothing automatic — run `scripts/install.sh --target docs` once (global), or `--target docs --scope project --path <dir>` |
+| This repository | already at the root |
+
+Agents resolve a cited path from the **project root first**, then `<project>/.agents-factory/`,
+then `~/.agents-factory/` (an install with a custom `AGENTS_FACTORY_HOME` writes that path into
+the generated agents instead). A project that keeps its own adapted copy of `process/` at its
+root therefore wins. If none of the three locations has the document, the agent says so and
+stops rather than working from memory; `/run-delivery`, `/run-advisory`, `/run-status`,
+`routing-a-step`, and `resuming-a-run` check this before anything else.
+
+Re-running the installer refreshes the docs. Each platform install also records what it
+wrote in a `.agents-factory-manifest` next to the platform files, so a later run reports an
+agent or skill that no longer has a source as an `ORPHAN` — without ever flagging files you
+created yourself in the same directory.
+
 ---
 
 ## Tool-posture → platform tool mapping
@@ -47,7 +73,7 @@ The roster assigns each agent a **posture**, not a fixed tool list. Translate th
 | Posture | Meaning | VS Code / Copilot ids | Claude Code tools | Roo Code groups | Codex / Hermes (session-level) |
 |---|---|---|---|---|---|
 | `R` | read-only | `read`, `search` | `Read, Grep, Glob` | `read` | `codex --sandbox read-only` / `hermes --safe-mode` |
-| `R+route` | read-only + routing-only `agent` | `read`, `search`, `agent` | `Read, Grep, Glob, Task` | `read` | same as `R` |
+| `R+route` | read-only + routing-only `agent` | `read`, `search`, `agent` | `Read, Grep, Glob` — **no `Task`**: a Claude Code subagent cannot start another, so `/run-delivery`'s main loop dispatches the agent 18 routes to | `read` | same as `R` |
 | `E` | edit | `read`, `search`, `edit` | `Read, Grep, Glob, Edit, Write` | `read, edit` | `--sandbox workspace-write`; no-terminal is prose-only |
 | `E+T` | edit + terminal | `read`, `search`, `edit`, `execute`, `todo` | `Read, Grep, Glob, Edit, Write, Bash, TodoWrite` | `read, edit, command` | `--sandbox workspace-write --ask-for-approval on-request` |
 | `O` | orchestration | `read`, `search`, `agent`, `todo` | `Read, Grep, Glob, Task, TodoWrite` — **must run as the main loop on Claude Code** | `read` (Roo switches modes natively) | main session only |
@@ -76,7 +102,7 @@ Roo Code:     read/search → read   |   edit → edit   |   execute → command
    - writes `agents/<name>.md` with the `tools:` line rewritten to Claude tool names and `argument-hint` dropped,
    - syncs the skills from `.github/skills/` into `skills/`,
    - syncs the commands from `.github/commands/` into `commands/`.
-2. For a **global** install nothing needs copying. For a **project** install, also copy `process/`, `templates/`, and (when you start) `runs/` into that project.
+2. The framework docs install with it (see [Framework docs](#framework-docs)). Nothing needs copying; `runs/` is created by the first run.
 3. Start a run with **`/run-delivery <run-id>`**. This is the key step: it makes your **main Claude session act as the Delivery Orchestrator**, because a Claude subagent cannot invoke other subagents — only the main loop can `Task`-dispatch the roster.
 4. Direct human use of any single agent works via the picker / `Task` with `mode: standalone`, a bounded task, and a target; no run ID or handoff is required.
 
@@ -126,7 +152,7 @@ These extensions natively read a **single `.roomodes`** file at the workspace ro
 1. Run `scripts/install.sh --target roo --scope project --path <dir>`. It writes `<dir>/.roomodes` with one `customModes:` entry per agent, each a custom-mode object: `slug`, `name`, `roleDefinition` (the agent's `You are …` persona), `whenToUse` (the agent's description), `groups` (the posture mapped to the `read`/`edit`/`command`/`browser` groups), and `customInstructions` (the full agent body verbatim). Skills install as their `SKILL.md` folders under `<dir>/.roo/skills/` — there is no native skills runtime, so invoke them manually (open `creating-stakeholder-packet/SKILL.md` and follow it before the first run).
 2. **Global vs project:**
    - **Project** (`--scope project --path <dir>`) writes `<dir>/.roomodes` at the workspace root — read natively.
-   - **Global** (`--scope global`, the default) writes the real global modes file, `custom_modes.yaml`, inside the editor's VS Code globalStorage for the extension (`…/globalStorage/zoocodeorganization.zoo-code/settings/`, or legacy `…/rooveterinaryinc.roo-cline/settings/`) — **not** `~/.roomodes`. The script auto-detects that dir across both extension ids and both install layouts: **desktop** editors (VS Code, Insiders, VSCodium, Cursor, Windsurf) and **remote/server** ones (`~/.vscode-server/data/User/...` over SSH, WSL, devcontainers, Codespaces, or code-server). It writes to every editor that has the extension installed. If none is found it fails with the candidate paths; open Zoo Code once so the dir exists, set `ROO_SETTINGS_DIR=<that settings dir>` to point at it explicitly, or fall back to a project install. Reload the editor window after installing.
+   - **Global** (`--scope global`, the default) writes the real global modes file, `custom_modes.yaml`, inside the editor's VS Code globalStorage for the extension (`…/globalStorage/zoocodeorganization.zoo-code/settings/`, or legacy `…/rooveterinaryinc.roo-cline/settings/`) — **not** `~/.roomodes`. The script auto-detects that dir across both extension ids and both install layouts: **desktop** editors (VS Code, Insiders, VSCodium, Cursor, Windsurf) and **remote/server** ones (`~/.vscode-server/data/User/...` over SSH, WSL, devcontainers, Codespaces, or code-server). It writes to every editor that has the extension installed. If a `custom_modes.yaml` already exists and was **not** generated by this script, the installer leaves it alone and warns — it may hold your own modes; merge by hand, or pass `--force` to replace it (the old file is kept as `custom_modes.yaml.bak`). `--dry-run` and `--check` never write. If none is found it fails with the candidate paths; open Zoo Code once so the dir exists, set `ROO_SETTINGS_DIR=<that settings dir>` to point at it explicitly, or fall back to a project install. Reload the editor window after installing.
 3. Start a run by switching to the **`delivery-orchestrator`** mode (slug `delivery-orchestrator`) and pointing it at the packet. The same agent-to-agent caveat as Copilot applies: if your harness can't let one mode invoke another, drive the sequence yourself in playbook order, writing handoff files under `runs/<run-id>/`.
 
 ### Generic `.agents` harness
@@ -172,7 +198,7 @@ After editing anything under `.github/`, run one command:
 scripts/install.sh --target repo
 ```
 
-`repo` regenerates every derived directory this repository tracks — the plugin components (`agents/`, `skills/`, `commands/`), `.claude/`, and `.cursor/` — in a single pass. It is idempotent: a second run reports `0 written`. Use `--dry-run` first to see what would change without writing anything.
+`repo` regenerates every derived directory this repository tracks — the plugin components (`agents/`, `skills/`, `commands/`), `.claude/`, and `.cursor/` — in a single pass. It is idempotent: a second run reports `0 written`. Use `--dry-run` first to see what would change without writing anything. CI runs `scripts/install.sh --target repo --check`, which fails on anything stale, orphaned, or warned about; `tests/test_installer.py` exercises every target into temporary directories and parses the output with a real YAML parser.
 
 In CI, use `--check` instead: it is `--dry-run` plus a non-zero exit when anything is stale, orphaned, or warned about, so a commit that edits `.github/` without regenerating fails the build rather than drifting quietly.
 

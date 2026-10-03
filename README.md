@@ -34,9 +34,12 @@ agents/ skills/ commands/   plugin component dirs (Claude Code format) — GENER
 process/             the spine: roster, invocation contract, handoff protocol, playbooks/
 templates/           the Stakeholder Input Packet template
 runs/                per-run workspaces — the live state store (packet, requirements, gates, handoffs)
-scripts/             install.sh — install/convert the roster for your platform
+scripts/             install.sh — install/convert the roster + framework docs for your platform
+tools/ tests/        release and version-gate tooling, and the invariant test suite (dev-only)
+docs/RELEASING.md    versioning, branches, gates, and the release runbook
 PORTABILITY.md       per-platform setup, directory map, tool-posture mapping
-CONTRIBUTING.md      the source-of-truth rule and how to add an agent, skill, playbook, or case
+CONTRIBUTING.md      how humans contribute: source-of-truth rule, workflow, invariants
+AGENTS.md            the same rules as operating instructions for AI coding agents
 ```
 
 **`.github/` is the source of truth** — agents, skills, and commands. Every other directory above marked GENERATED is derived from it. After editing anything under `.github/`, regenerate them all with one command:
@@ -81,6 +84,9 @@ scripts/install.sh --target hermes    # add --scope project --path <dir> for a r
 # Generic ".agents" harness — one custom-mode YAML per agent -> ~/.agents/
 scripts/install.sh --target agents    # add --scope project --path <dir> for one project
 
+# Framework docs only (process/ + templates/) — what a plugin install needs alongside it
+scripts/install.sh --target docs      # add --scope project --path <dir> for <dir>/.agents-factory
+
 # Claude Code marketplace plugin — regenerates this repo's root agents/ skills/ commands/
 scripts/install.sh --target plugin
 
@@ -88,7 +94,7 @@ scripts/install.sh --target plugin
 scripts/install.sh --target repo
 ```
 
-A global install needs nothing copied — every project picks up `~/.claude` (or `~/.cursor`) automatically. For a **project-scoped** install, also copy `process/` and `templates/` into that project. See [PORTABILITY.md](PORTABILITY.md) for exactly which folders each platform needs.
+Nothing needs copying by hand. Every agent reads the framework docs (`process/`, `templates/`) at run time, so each install also puts them where the agents look: `~/.agents-factory/` for a global install, `<dir>/.agents-factory/` for a project one. A project's own `process/` at its root takes precedence. See [PORTABILITY.md § Framework docs](PORTABILITY.md#framework-docs).
 
 ### 2. Create the packet
 
@@ -145,6 +151,8 @@ The roster also ships as a **Claude Code marketplace plugin** — the repo is bo
 
 Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace and plugin are both named `agents-factory` (the `<plugin>@<marketplace>` key).
 
+**The plugin ships agents, skills, and commands, not the framework docs they read.** Once per machine, from a clone of this repo, run `scripts/install.sh --target docs` (or `--target docs --scope project --path <dir>`). Without it, `/run-delivery` stops at its precheck and tells you to.
+
 ---
 
 ## What's covered
@@ -159,15 +167,29 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 
 ## Limitations & prerequisites
 
-- **Orchestration model.** The framework assumes the orchestrator can invoke the other agents. On Claude Code, subagents cannot spawn subagents — so the orchestrator must run as the **main loop** (the `/run-delivery` driver does this). On Copilot/Cursor, agent-to-agent invocation is version-dependent; Codex and Hermes have none at all. Where the harness cannot dispatch, the `routing-a-step` skill makes you the transport — run state was always on disk, so only the automation is lost. See PORTABILITY.
+- **Orchestration model.** The framework assumes the orchestrator can invoke the other agents. On Claude Code, subagents cannot spawn subagents — so the orchestrator must run as the **main loop** (the `/run-delivery` driver does this). On Copilot and Roo/Zoo, agent-to-agent invocation is version-dependent; Cursor, Codex, and Hermes have none at all. Where the harness cannot dispatch, the `routing-a-step` skill makes you the transport — run state was always on disk, so only the automation is lost. See PORTABILITY.
 - **`tools:` frontmatter is platform-specific.** The R / E / E+T / O **posture** is the portable contract; the literal tool names differ per platform. The converter rewrites them for Claude Code.
 - **Gates need a human.** Runs halt for sign-off by design; a stalled-looking run waiting at a gate is the framework working as intended, not a failure to recover from.
 - **`runs/` is the state store.** Keep it in the repo (or a sibling repo for pre-repo phases). Statelessness depends on it.
 - **This repo ships one real run workspace.** `runs/2026-06-comedor-vecinal/` is committed on purpose, as reference material for what a live run looks like on disk — it is the artifact the worked example links. It is also the largest non-agent payload here and it downloads with the plugin. Delete the directory if you install the roster into a project and want it gone; nothing depends on it at runtime. Note that it was executed against the 20-agent roster and does not conform to today's `greenfield` playbook — see the callout in [`process/examples/comedor-greenfield.md`](process/examples/comedor-greenfield.md).
+- **Authoring a new agent expects `prompt-anatomy`.** Agent bodies follow the component structure of the `prompt-anatomy` skill from [`veglezMX/veglez-skills`](https://github.com/veglezMX/veglez-skills). Install it when you write or restructure an agent; running a delivery run does not need it.
 - **No language/stack is assumed.** Agents adapt to your stack via the packet and design; nothing here is tied to a framework.
+
+---
+
+## Versions & releases
+
+Releases follow [Semantic Versioning](https://semver.org/) and are cut from `main` as `vX.Y.Z` tags, each with a GitHub Release whose notes are the matching [`CHANGELOG.md`](CHANGELOG.md) section. The project is pre-1.0: a **minor** release may change the roster, playbooks, skills, commands, or a contract; a **patch** release only fixes. Pin one:
+
+```bash
+/plugin marketplace add veglezMX/agent-factory@v0.3.0                 # Claude Code plugin
+git checkout v0.3.0 && scripts/install.sh --target <platform>          # any platform
+```
+
+How releases are made, and what counts as a breaking change: [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ---
 
 ## Extending it
 
-Adding an agent or a case is a drop-in — see the conformance rules in [`process/agent-roster.md`](process/agent-roster.md), [`process/agent-invocation-contract.md`](process/agent-invocation-contract.md), [`process/playbooks/playbook-schema.md`](process/playbooks/playbook-schema.md), and the handoff [conformance checklist](process/agent-handoff-protocol.md). Agents follow the `prompt-anatomy` component structure; mirror an existing sibling of the same tool posture.
+Contributions are welcome — read [CONTRIBUTING.md](CONTRIBUTING.md) (humans) or [AGENTS.md](AGENTS.md) (AI coding agents) first. Adding an agent or a case is a drop-in — see the conformance rules in [`process/agent-roster.md`](process/agent-roster.md), [`process/agent-invocation-contract.md`](process/agent-invocation-contract.md), [`process/playbooks/playbook-schema.md`](process/playbooks/playbook-schema.md), and the handoff [conformance checklist](process/agent-handoff-protocol.md). Agents follow the component structure of the `prompt-anatomy` skill ([`veglezMX/veglez-skills`](https://github.com/veglezMX/veglez-skills), an authoring-time dependency); mirror an existing sibling of the same tool posture. The test suite (`tests/`) checks the mechanical rules on every pull request — see [CONTRIBUTING.md](CONTRIBUTING.md).

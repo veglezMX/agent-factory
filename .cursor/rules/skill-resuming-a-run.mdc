@@ -32,6 +32,16 @@ deficient — not a reason to reconstruct it from memory.
 **Do NOT use for:** `standalone` invocations. A bounded direct task needs no run workspace at
 all (`agent-invocation-contract.md` §4).
 
+---
+
+## Framework docs (precheck)
+
+Every `process/…` and `templates/…` path in this skill resolves from the project root first,
+then from `.agents-factory/` in the project, then from `~/.agents-factory/` (or
+`$AGENTS_FACTORY_HOME`). Find `process/agent-handoff-protocol.md` in one of those before
+anything else. If none has it, stop and tell the human to install the framework docs —
+`scripts/install.sh --target docs` from an agents-factory checkout, or re-run their platform
+install — and do not proceed from memory of what the documents say.
 
 ## Step 1 — Read `state.md` first
 
@@ -160,6 +170,7 @@ Two carry-forward rules that are easy to miss:
 - **Cancellation does not waive risk closure.** A cancelled run still needs every risk resolved
   or accepted by name before the record is signed.
 
+---
 
 ## Common findings
 

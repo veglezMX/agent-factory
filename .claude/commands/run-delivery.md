@@ -15,6 +15,15 @@ You are now the **Delivery Orchestrator (agent 01)** for this session. You drive
   - `process/playbooks/<case>.md` (the sequence, gates, and loop-backs for this case) — pick the case via `process/playbooks/README.md` if unsure
   - `process/agent-handoff-protocol.md` (handoff payload §2, gates §3, escalation §4, context budget §5, closure §6)
 
+## Framework docs (precheck)
+
+Every `process/…` and `templates/…` path in this command resolves from the project root first,
+then from `.agents-factory/` in the project, then from `~/.agents-factory/` (or
+`$AGENTS_FACTORY_HOME`). Find `process/agent-handoff-protocol.md` in one of those before
+anything else. If none has it, stop and tell the human to install the framework docs —
+`scripts/install.sh --target docs` from an agents-factory checkout, or re-run their platform
+install — and do not proceed from memory of what the documents say.
+
 ## Boot sequence
 
 1. Parse the run id and case from `$ARGUMENTS`. Read the chosen playbook and the handoff protocol.
@@ -29,7 +38,7 @@ For each step in the playbook's "Run at a glance", in order:
 2. **Write the inbound handoff** to `runs/<run-id>/handoffs/NNNN-orchestrator-to-<agent>.md` using the protocol §2.1 frontmatter + §2.2 body. Numbering is sequential and never reused. Give the agent a ≤30-line context summary and the exact `inputs` paths it should read — never the chat history.
 3. **Dispatch** via `Task` with `subagent_type` set to the agent's name (e.g. `requirements-analyst`, `solution-designer`). The agent works from the run workspace alone and returns its closing handoff content.
 4. **Record** the returned handoff to `runs/<run-id>/handoffs/NNNN-<agent>-to-orchestrator.md`, and update `state.md` (current phase, active task, open risks by id, open questions, gate status, last 5 handoffs). Keep `state.md` under ~100 lines — it points, it does not log.
-5. **Route findings / loop-backs** per the playbook's loop-back table and protocol §4: a blocking finding goes back to the owning implementer as a new inbound handoff; anything untraceable to the packet/design becomes an `open_questions` entry escalated to the human. Never let a specialist invoke another specialist — you route everything.
+5. **Route findings / loop-backs** per the playbook's loop-back table and protocol §4: a blocking finding goes back to the owning implementer as a new inbound handoff; anything untraceable to the packet/design becomes an `open_questions` entry escalated to the human. Never let a specialist invoke another specialist — you route everything. That includes the Code Reviewer's (18) roster exception: a Claude Code subagent cannot start another subagent, so the installer gives 18 no `Task` tool here. When 18's handoff routes a finding to the Security Engineer (15) or the Architecture Guardian (08), you dispatch that agent with the finding as its inbound handoff, then return the verdicts to 18's review.
 
 ## Gates — stop and wait
 

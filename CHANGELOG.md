@@ -5,9 +5,24 @@ All notable changes to this project are recorded here. The version lives in
 skill/command set; **patch** for documentation and installer fixes.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely.
-Versions before `0.2.0` were not tagged; their entries are reconstructed from git history.
+`0.1.0` and `0.2.0` were tagged retroactively on the commits that set those versions in
+`plugin.json`; their entries are reconstructed from git history. Every release from `0.3.0`
+on is tagged and published as described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
+
+## [0.3.0] — 2026-10-03
+
+The first tagged release. The repository's invariants are now enforced by a test suite and
+CI gates instead of review, the installer is hardened and ships the framework docs every
+agent depends on, and releases follow a written, automated process. Also released here: the
+Codex, Hermes, and Zoo/Roo install targets, `/run-advisory`, and the `routing-a-step` skill,
+which landed after `0.2.0` was cut.
+
+**Upgrading from 0.2.0:** re-run your platform install (`scripts/install.sh --target …`) — it
+now also installs `process/` and `templates/` to `~/.agents-factory/`. Plugin users run
+`scripts/install.sh --target docs` once. A Zoo/Roo global install no longer overwrites a
+`custom_modes.yaml` it did not create; pass `--force` to replace it (a `.bak` is kept).
 
 ### Added
 
@@ -43,6 +58,119 @@ Versions before `0.2.0` were not tagged; their entries are reconstructed from gi
   comment, so a renamed or deleted agent is reported as an `ORPHAN` even though agent-skills
   and framework skills share one directory. A name collision between a framework skill and
   an agent is reported as a warning instead of silently overwriting.
+
+- **`scripts/install.sh --target roo`** (alias `zoo`) — a native Zoo Code / Roo Code
+  install: one `.roomodes` file with a `customModes:` array per project, or the editor's
+  global `custom_modes.yaml` (auto-detected in VS Code / VS Code Server globalStorage).
+  Landed on `main` after `0.2.0` was cut and was not recorded until now.
+- **`/run-advisory`** — a lightweight review path that chains read-only/review agents over an
+  existing codebase, carrying each hand-off as a file under `agents-run/`. Also landed after
+  `0.2.0` without an entry.
+- **`process/advisory-pipeline-usage.md`** and the standalone invocation cheat sheet entry for
+  the UI Layout Designer.
+
+- **A test suite that machine-enforces the repository's invariants** (`tests/`, run by
+  `pytest`): roster ↔ agent files, posture ↔ `tools:`, the agent section template, playbook
+  frontmatter and sections, the case × agent matrix in both directions, closed skill
+  frontmatter, commands, manifest counts and versions, CHANGELOG shape, relative links and
+  protocol/contract section citations, derived-directory sync, and harness neutrality.
+  `CONTRIBUTING.md` used to call these "review-time checks"; review missed them.
+- **`tools/check_versions.py`** — the bump-on-change gate. R1: a changed skill must raise its
+  `version:`. R2: a change to distributed content must come with a `CHANGELOG.md` entry.
+- **Per-skill versions.** Every `SKILL.md` carries `version:` (all start at `0.1.0`), and the
+  skill frontmatter is closed at `name`, `description`, `version`, `prerequisites`.
+- **`prompt-anatomy` declared as a prerequisite** of `authoring-an-agent` (frontmatter and
+  prose): an authoring-time dependency on `veglezMX/veglez-skills` that was previously named
+  without saying where it comes from.
+- **`ci` workflow** (renamed from `derived dirs`): ruff, shellcheck, the derived-directory
+  check, the version gate, pyright, and the test suite, on pushes to `main`/`dev` and on
+  every pull request. Python tooling (`pyproject.toml`, `uv.lock`, `justfile`) is dev-only;
+  nothing Python ships.
+
+- **Framework docs ship with every install.** Every agent cites `process/…` and
+  `templates/…`, but a global or plugin install left them behind, so a fresh project had none
+  of the documents its agents were told to follow. Platform targets now install them —
+  `~/.agents-factory/` globally (honours `AGENTS_FACTORY_HOME`), `<dir>/.agents-factory/` per
+  project — and the new `--target docs` installs only them, for plugin users. The shared
+  Invocation paragraph in all 29 agents states the resolution order (project root,
+  `<project>/.agents-factory/`, `~/.agents-factory/`), and `/run-delivery`, `/run-advisory`,
+  `/run-status`, `routing-a-step`, and `resuming-a-run` stop with an install hint when the docs
+  are missing instead of proceeding from memory.
+- **`scripts/install.sh --force`** — replace a Zoo/Roo modes file the installer did not
+  generate, keeping the previous one as `<file>.bak`.
+- **Install manifests.** Each platform install records what it wrote in
+  `.agents-factory-manifest`, so orphan detection covers removed agents, skills, and commands
+  without ever flagging the user's own files in a shared directory like `~/.claude/agents`.
+- **`tests/test_installer.py`** — every target run into temporary directories, outputs parsed
+  with PyYAML, plus a regression test per installer defect below.
+
+- **A release process.** `docs/RELEASING.md` defines what a version means for a prompt
+  framework (the public interface is its contracts), the `main`/`dev` branch model, the CI
+  gates, Keep a Changelog discipline, and a step-by-step runbook. `tools/release.py`
+  (`just release-prep`, `release-verify`, `release-notes`) bumps `plugin.json`, rotates the
+  CHANGELOG, and proves tag, version, and CHANGELOG agree; `.github/workflows/release.yml`
+  re-runs every gate on a `v*` tag and publishes the GitHub Release from the CHANGELOG
+  section (`-rc.N` tags become pre-releases). `v0.1.0` and `v0.2.0` are tagged
+  retroactively.
+- **Contributor guidance for humans and agents.** `CONTRIBUTING.md` is rewritten around the
+  workflow (branches, Conventional Commits, pull-request checklist, review) and maps every
+  invariant to the test that enforces it. `AGENTS.md` gives AI coding agents the same rules as
+  operating instructions (`CLAUDE.md` imports it). New pull-request and issue templates and a
+  `SECURITY.md`.
+
+### Fixed
+
+- **Manifest descriptions disagreed.** `marketplace.json` claimed five skills and both
+  manifests named two of the four commands. Both now carry one identical description with
+  the correct counts.
+- **The `authoring-a-playbook` matrix check silently checked nothing.** Its embedded script
+  listed nine columns against a ten-column matrix, filtered out every row, and printed
+  `mismatches: 0`. The check now lives in the test suite; the skill points at it.
+- Stale counts and references: "nine existing cases", "Twenty-eight of the 29", the
+  `gate-release.md` filename in `incident`, the "orchestrator adds that section" notes in
+  `refactor` and `data-operation` (protocol §3.4 exists), "row" vs "column" in
+  `playbook-schema.md`, and non-existent protocol §5.2/§5.3 citations in the Delivery
+  Orchestrator.
+- `README.md` said Cursor's agent-to-agent invocation was version-dependent; it has none.
+  `PORTABILITY.md` described skill support on Copilot and Cursor incorrectly.
+- The packet template's traceability appendix named no consumer for agents 03, 08, 09, and
+  21–29. Every roster agent now appears.
+- **Tool postures contradicted each other.** Five roster entries used postures outside the
+  five-token legend (`R (+docs)`, `R, E on request`) while their `tools:` granted `edit`;
+  `process/standalone-invocation.md` defined three postures and labelled every `E+T` agent
+  `E`. Every roster posture is now one legend token — the one its `tools:` line grants — with
+  any narrowing stated as a parenthetical, and `tests/test_roster.py` derives and checks it.
+- **The Code Reviewer's routing exception was contradicted.** The roster said 18 may call
+  exactly 15 and 08, yet listed it (and the CI/CD Engineer, which has no `agent` tool) as a
+  caller of 22 and 27. Those now recommend; the Orchestrator routes.
+- `creating-stakeholder-packet` named a Claude-only tool; it now describes the capability.
+- **`--target roo` wrote on `--dry-run` and `--check` and could destroy user modes.** The
+  `.roomodes`/`custom_modes.yaml` writer bypassed the dry-run path, was not counted, and
+  overwrote a hand-written global modes file. It now goes through the same write path as every
+  other file and refuses to replace a modes file it did not generate unless `--force` is given.
+- **The installer exited silently when an optional frontmatter field was missing** (an agent
+  without `argument-hint:` or `name:`), under `set -o pipefail`. Frontmatter parsing is now
+  scoped to the frontmatter block and never fails on an absent key.
+- **`--check` could pass when it should fail.** Warnings raised inside command substitutions
+  were lost, and removed skills and commands were never reported as orphans.
+- **Every `---` line in a body was deleted**, including horizontal rules and the frontmatter
+  example in `authoring-an-agent` (the shipped Cursor rule had lost its delimiters).
+- **Tool lists in other YAML shapes were read as read-only** (single quotes, block sequences);
+  an unparseable `tools:` is now a fatal error rather than a silent downgrade.
+- **YAML escaping**: backslashes in descriptions, single-quoted and folded (`>-`) descriptions,
+  and bodies whose first line is indented all produced invalid or wrong YAML. Block scalars now
+  carry explicit indentation indicators.
+- **CRLF sources** passed `argument-hint` and VS Code tool ids straight into `.claude/agents`.
+- **Orphan false positives**: an agent whose `name:` differs from its filename was reported as
+  an orphan on Codex/Hermes forever, and global installs flagged the user's own agents.
+- **An exported `CDPATH` broke path resolution**, and `--scope "global project"` passed
+  validation and installed to `/`.
+- `--check --keep-existing` silently skipped the files it was meant to compare; it is now
+  refused. A dry run no longer reports "would update" for a destination the real run refuses.
+- **The Code Reviewer got `Task` on Claude Code**, where a subagent cannot start another; its
+  routing is now dispatched by the `/run-delivery` main loop, as `PORTABILITY.md` documents.
+- `CHANGELOG.md` recorded work under `0.1.0` that landed later, and gave the matrix as 261
+  cells (it is 290).
 
 ## [0.2.0] — 2026-07-31
 
@@ -88,7 +216,7 @@ command, the documents no longer over-claim, and the distribution is legally ins
 - **The case × agent matrix over-claimed coverage.** Six cells marked agents `27`/`28` as
   conditional for cases whose playbooks never routed to them. Agent `27` is now a real step
   in `brownfield-onboard`, `defect`, and `deprecation`; agent `28` in `brownfield-onboard`
-  and `deprecation`; and `28 × spike` is corrected to "not used". All 261 cells now
+  and `deprecation`; and `28 × spike` is corrected to "not used". All 290 cells (29 agents × 10 cases) now
   reconcile with the playbooks' `agents:` frontmatter.
 - **The worked example contradicted the run it links.** `process/examples/comedor-greenfield.md`
   described six services and Stripe; `runs/2026-06-comedor-vecinal/` decides an eight-module
@@ -125,21 +253,37 @@ command, the documents no longer over-claim, and the distribution is legally ins
   a directory of 30 files.
 - A stray `.ruff_cache/` from unrelated Python tooling.
 
+### Retroactive notes
+
+These landed between `0.1.0` and `0.2.0` and were originally recorded under `0.1.0` by
+mistake. They are part of `0.2.0`:
+
+- Agent `29`, the standalone-friendly UI Layout Designer (2026-07-14).
+- `process/agent-invocation-contract.md` (`pipeline` and `standalone` modes) and the
+  standalone invocation cheat sheet `process/standalone-invocation.md` (2026-07-10/14).
+- `scripts/install.sh`: global-by-default installation with `--scope project` replacing
+  `--dest`, Copilot CLI global install to `~/.copilot`, and the `agents` target
+  (Roo custom-mode YAML) (2026-06-16).
+
 ## [0.1.0] — 2026-06-14
 
-First packaged release.
+First packaged release (`2c0dc9b`, tagged retroactively).
 
 ### Added
 
-- The 29-agent roster (core `01`–`20`, expansion `21`–`29`), each conforming to the prompt
+- The 28-agent roster (core `01`–`20`, expansion `21`–`28`), each conforming to the prompt
   anatomy, with `.github/agents/` as the source of truth.
-- The process spine: agent roster, handoff protocol, invocation contract (`pipeline` and
-  `standalone` modes), and the standalone invocation cheat sheet.
+- The process spine: agent roster and handoff protocol.
 - Nine case playbooks plus `playbook-schema.md`.
 - The Stakeholder Input Packet template and the `creating-stakeholder-packet` skill.
-- `scripts/install.sh` with `claude`, `cursor`, `copilot`, `agents` (Roo custom-mode), and
-  `plugin` targets; global-by-default installation with `--scope project`.
+- `scripts/install.sh` with `claude`, `cursor`, `copilot`, and `plugin` targets, writing to a
+  `--dest` directory.
 - Packaging as a Claude Code marketplace plugin (`.claude-plugin/`).
 - `README.md` and `PORTABILITY.md`.
 - One worked example and one real run workspace, `runs/2026-06-comedor-vecinal/`, live
   through Phase 0.
+
+[Unreleased]: https://github.com/veglezMX/agent-factory/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/veglezMX/agent-factory/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/veglezMX/agent-factory/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/veglezMX/agent-factory/releases/tag/v0.1.0

@@ -45,8 +45,10 @@ check the rest of the roster relies on. Do not compose a definition from scratch
    in `process/playbooks/README.md`. The matrix and the `agents:` lists must agree in both
    directions.
 5. **Regenerate:** `scripts/install.sh --target repo`
-6. **Update the counts.** "29 agents" appears in `README.md`, `process/agent-roster.md`,
-   `.claude-plugin/plugin.json`, and `.claude-plugin/marketplace.json`. Bump the plugin
+6. **Update the counts.** The agent count is stated in `README.md` (layout block, pillars
+   table, "What's covered"), in the roster's closing paragraph in `process/agent-roster.md`,
+   and in the `description` of `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`;
+   `tests/test_manifests.py` and `tests/test_docs.py` fail until they all agree. Bump the plugin
    **minor** version and add a `CHANGELOG.md` entry — a roster change with an unbumped version
    is the specific defect the versioning rule exists to prevent.
 

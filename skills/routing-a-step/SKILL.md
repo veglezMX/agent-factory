@@ -1,6 +1,7 @@
 ---
 name: routing-a-step
 description: Use when a delivery run must advance one step on a platform where the Delivery Orchestrator cannot dispatch other agents itself — Cursor, Codex, Hermes, a Copilot or Roo build without agent-to-agent support, or any harness where you are the transport between agents. Turns "where the run stands" into the exact inbound handoff and the paste-ready invocation for the next agent. Also use to keep each step in its own clean context.
+version: 0.1.0
 ---
 
 # Routing a Step
@@ -38,6 +39,15 @@ stops being resumable and the whole audit chain is fiction.
   then come back here to dispatch the step it identifies.
 
 ---
+
+## Framework docs (precheck)
+
+Every `process/…` and `templates/…` path in this skill resolves from the project root first,
+then from `.agents-factory/` in the project, then from `~/.agents-factory/` (or
+`$AGENTS_FACTORY_HOME`). Find `process/agent-handoff-protocol.md` in one of those before
+anything else. If none has it, stop and tell the human to install the framework docs —
+`scripts/install.sh --target docs` from an agents-factory checkout, or re-run their platform
+install — and do not proceed from memory of what the documents say.
 
 ## Step 1 — Establish the position
 

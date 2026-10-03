@@ -1,7 +1,7 @@
 # Versioning, Gates, and a Test Suite for agents-factory
 
 **Date:** 2026-08-29
-**Status:** Approved (design); implementation plan pending
+**Status:** Implemented in 0.3.0 (see CHANGELOG). The branch model is `main` + `dev`; `docs/RELEASING.md` is the living version of §5.3–§5.4.
 **Scope:** `agents-factory` only. No changes to `veglez-skills`.
 
 ---

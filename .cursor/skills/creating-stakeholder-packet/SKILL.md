@@ -1,6 +1,7 @@
 ---
 name: creating-stakeholder-packet
 description: Use when a delivery run needs a Stakeholder Input Packet and none exists or the existing one has gaps, OPEN items, hedges, or contradictions — e.g., the project idea lives in a conversation, loose notes, or a short brief. Required before the requirements-analyst agent (and therefore the whole pipeline) can run.
+version: 0.1.0
 ---
 
 # Creating the Stakeholder Input Packet
@@ -49,7 +50,7 @@ digraph interview_loop {
 ## Phase 2 — Interview Rounds
 
 - **≤4 questions per round.** Plain language only — the stakeholder is non-technical; no schema/auth/API vocabulary.
-- Use `AskUserQuestion` when available (concrete options + free-text always possible); otherwise numbered questions in chat.
+- Use your harness's structured-question tool when it has one (concrete options + free-text always possible); otherwise numbered questions in chat.
 - **Priority order:** §1–§5 (identity, roles, journeys, features, rules) → §6–§9 (data, touchpoints, permissions, privacy) → §10–§15 → §16–§17.
 - One topic per question. Show the expected detail level by borrowing from the template's worked example.
 - "I don't know" is a valid answer → mark `OPEN` with enough context for the Requirements Analyst to form a clarification question. **`OPEN` is permitted only after the stakeholder was actually asked.**

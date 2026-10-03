@@ -49,10 +49,15 @@ data is reported as a dependency; it is never fabricated or obtained by silently
 
 ## Posture legend
 
+The marks are the roster's tool postures (`process/agent-roster.md` legend); each agent's
+mark is derived from its `tools:` frontmatter.
+
 | Mark | Meaning |
 |------|---------|
-| **E** | Edit-capable — writes its own artifacts / real repo code |
 | **R** | Read-only — writes *findings only*, never edits your code |
+| **R+route** | Read-only, plus forwarding a finding to named specialists (Code Reviewer only) |
+| **E** | Edit-capable inside its boundary — writes its own artifacts or docs; agents whose roster entry says "read-only by default" edit only when you explicitly task them to |
+| **E+T** | Edit + terminal — also runs commands (tests, builds, generators) |
 | **O** | Orchestration-only — drives other agents |
 
 ---
@@ -95,23 +100,23 @@ Build one first with the **`creating-stakeholder-packet`** skill (template:
 
 | Agent | Feed it | Produces | Posture |
 |-------|---------|----------|---------|
-| **foundation-engineer** | `architecture.md` + foundation bundle task | Repo layout, tooling, shared primitives, dev runtime | E — *first build agent* |
-| **contract-client-guardian** | `architecture.md` + `integration-inventory.md` + approved UI data dependencies when present | API contracts + generated clients | E — *after foundation* |
-| **backend-domain-implementer** | Approved contracts + schemas + bundle task | Backend routes/domain/repos + service tests | E |
-| **data-migration-engineer** | Packet data sections + **stable** contracts | Schemas, migrations (+rollback), seed data | E — *after contracts* |
-| **frontend-feature-builder** | Generated API client + `ux-inventory.md` + `design-system.md` + UI layout specs when available | Frontend screens/routing/state + all route states | E — *after backend contracts stable* |
-| **integration-engineer** | One entry from `integration-inventory.md` | Deterministic fake + production adapter (one interface) | E — *once per integration* |
-| **ai-prompt-engineer** | Packet AI-behavior spec | Prompts, eval harness, guardrails, RAG wiring | E — *conditional; per AI feature only* |
+| **foundation-engineer** | `architecture.md` + foundation bundle task | Repo layout, tooling, shared primitives, dev runtime | E+T — *first build agent* |
+| **contract-client-guardian** | `architecture.md` + `integration-inventory.md` + approved UI data dependencies when present | API contracts + generated clients | E+T — *after foundation* |
+| **backend-domain-implementer** | Approved contracts + schemas + bundle task | Backend routes/domain/repos + service tests | E+T |
+| **data-migration-engineer** | Packet data sections + **stable** contracts | Schemas, migrations (+rollback), seed data | E+T — *after contracts* |
+| **frontend-feature-builder** | Generated API client + `ux-inventory.md` + `design-system.md` + UI layout specs when available | Frontend screens/routing/state + all route states | E+T — *after backend contracts stable* |
+| **integration-engineer** | One entry from `integration-inventory.md` | Deterministic fake + production adapter (one interface) | E+T — *once per integration* |
+| **ai-prompt-engineer** | Packet AI-behavior spec | Prompts, eval harness, guardrails, RAG wiring | E+T — *conditional; per AI feature only* |
 
 ## Phase 3 — Hardening
 
 | Agent | Feed it | Produces | Posture |
 |-------|---------|----------|---------|
-| **validation-test-engineer** | Built code + contracts | Invariant/contract/integration/E2E suites + acceptance gate | E |
-| **observability-engineer** | Stabilized service behavior | Structured logging, metrics, traces, health checks | E |
-| **product-analytics-engineer** | Stabilized product behavior + packet privacy § | Event taxonomy, KPI/funnel instrumentation (consent-gated) | E |
-| **performance-load-engineer** | Packet scale expectations + critical journeys | Load/stress/soak/spike suites + perf budgets | E |
-| **code-reviewer** | An implementation diff | `findings/review/` (routes to security/arch) | R |
+| **validation-test-engineer** | Built code + contracts | Invariant/contract/integration/E2E suites + acceptance gate | E+T |
+| **observability-engineer** | Stabilized service behavior | Structured logging, metrics, traces, health checks | E+T |
+| **product-analytics-engineer** | Stabilized product behavior + packet privacy § | Event taxonomy, KPI/funnel instrumentation (consent-gated) | E+T |
+| **performance-load-engineer** | Packet scale expectations + critical journeys | Load/stress/soak/spike suites + perf budgets | E+T |
+| **code-reviewer** | An implementation diff | `findings/review/` (routes to security/arch) | R+route |
 | **security-engineer** | Diff touching auth/secrets/CORS/etc. | `findings/security/` | E |
 | **accessibility-auditor** | Design-system a11y spec **or** implemented UI | `findings/accessibility/` | E |
 | **ui-layout-designer** | Implemented page + approved UI layout/baseline | `findings/ui/` fidelity review; optional standalone presentational improvements | E+T |
@@ -126,8 +131,8 @@ bundle-intake-validator, product-planner**) touch nothing — safest to run solo
 
 | Agent | Feed it | Produces | Posture |
 |-------|---------|----------|---------|
-| **infrastructure-platform-engineer** | `architecture.md` + infra bundle task | IaC: network, data stores, secrets, DNS/TLS, IAM, compute | E — *plan-before-apply; never destructive to shared/prod without recorded approval* |
-| **cicd-deployment-engineer** | Foundation + build output | CI pipelines, container builds, deploy + rollback config | E |
+| **infrastructure-platform-engineer** | `architecture.md` + infra bundle task | IaC: network, data stores, secrets, DNS/TLS, IAM, compute | E+T — *plan-before-apply; never destructive to shared/prod without recorded approval* |
+| **cicd-deployment-engineer** | Foundation + build output | CI pipelines, container builds, deploy + rollback config | E+T |
 | **documentation-runbook-writer** | Implemented, stabilized behavior | Setup guides, runbooks, release notes, known-limitations | E |
 
 ## Orchestration
