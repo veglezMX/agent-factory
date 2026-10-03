@@ -31,7 +31,8 @@ test *args:
 lint:
     uv run ruff check tools tests
     uv run ruff format --check tools tests
-    if command -v shellcheck >/dev/null; then shellcheck -S warning scripts/install.sh; else echo "shellcheck not installed — skipped (CI runs it)"; fi
+    uvx --from shellcheck-py shellcheck -S warning scripts/install.sh
+    uvx --from actionlint-py actionlint .github/workflows/*.yml
 
 # Auto-fix formatting.
 fmt:

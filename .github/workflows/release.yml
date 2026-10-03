@@ -1,0 +1,86 @@
+name: release
+
+# Publishes a GitHub Release for a version tag (docs/RELEASING.md, "Cutting a release").
+# The plugin ships from the repository at the tag, so there is nothing to build: this
+# workflow re-runs every gate on the tagged commit, proves the tag, plugin.json, and
+# CHANGELOG agree, and publishes that version's CHANGELOG section as the release notes.
+#
+#   push of vX.Y.Z       -> release
+#   push of vX.Y.Z-rc.N  -> pre-release
+#   workflow_dispatch    -> (re)publish the release for an existing tag, e.g. the
+#                           retroactively tagged v0.1.0 and v0.2.0
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish (e.g. v0.2.0)"
+        required: true
+      historical:
+        description: "Tag predates the release tooling: skip gates and version checks"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    if: github.event_name == 'push' || !inputs.historical
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: gates
+    if: always() && (needs.gates.result == 'success' || needs.gates.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Tag, plugin.json, and CHANGELOG agree
+        if: github.event_name == 'push' || !inputs.historical
+        run: uv run --no-project python tools/release.py verify --tag "$TAG"
+
+      - name: Release notes from CHANGELOG
+        run: |
+          version="${TAG#v}"; version="${version%%-rc.*}"
+          if [ -f tools/release.py ]; then
+            uv run --no-project python tools/release.py notes "$version" > notes.md
+          else
+            # Historical tags predate tools/release.py: read the section from the
+            # current default branch's CHANGELOG instead.
+            git show "origin/${{ github.event.repository.default_branch }}:CHANGELOG.md" > CHANGELOG.current.md
+            awk -v v="$version" '
+              $0 ~ "^## \\[" v "\\]" { on = 1; next }
+              on && /^## \[/ { exit }
+              on && /^\[[^]]+\]: http/ { exit }
+              on { print }' CHANGELOG.current.md > notes.md
+          fi
+          test -s notes.md || { echo "no CHANGELOG section for $version" >&2; exit 1; }
+          if [ "${{ inputs.historical }}" = "true" ]; then
+            { printf '%s\n\n' "_Tagged retroactively on the commit that set this version in plugin.json._"
+              cat notes.md; } > notes.tmp && mv notes.tmp notes.md
+          fi
+
+      - name: Publish GitHub Release
+        run: |
+          version="${TAG#v}"
+          flags=(--title "agents-factory $version" --notes-file notes.md)
+          if [ "${{ inputs.historical }}" = "true" ]; then flags+=(--latest=false)
+          else case "$TAG" in *-rc.*) flags+=(--prerelease) ;; *) flags+=(--latest) ;; esac; fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" "${flags[@]}"
+          else
+            gh release create "$TAG" --verify-tag "${flags[@]}"
+          fi

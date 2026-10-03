@@ -36,11 +36,12 @@ jobs:
           uv sync --locked
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
 
-      - name: Lint (ruff, shellcheck)
+      - name: Lint (ruff, shellcheck, actionlint)
         run: |
           uv run ruff check tools tests
           uv run ruff format --check tools tests
           shellcheck -S warning scripts/install.sh
+          uvx --from actionlint-py actionlint .github/workflows/*.yml
 
       - name: Derived directories are in sync with .github/
         run: scripts/install.sh --target repo --check

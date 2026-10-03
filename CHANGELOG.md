@@ -7,7 +7,7 @@ skill/command set; **patch** for documentation and installer fixes.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely.
 `0.1.0` and `0.2.0` were tagged retroactively on the commits that set those versions in
 `plugin.json`; their entries are reconstructed from git history. Every release from `0.3.0`
-on is tagged and published as described in `docs/RELEASING.md`.
+on is tagged and published as described in [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## [Unreleased]
 
@@ -90,6 +90,20 @@ on is tagged and published as described in `docs/RELEASING.md`.
   without ever flagging the user's own files in a shared directory like `~/.claude/agents`.
 - **`tests/test_installer.py`** — every target run into temporary directories, outputs parsed
   with PyYAML, plus a regression test per installer defect below.
+
+- **A release process.** `docs/RELEASING.md` defines what a version means for a prompt
+  framework (the public interface is its contracts), the `main`/`dev` branch model, the CI
+  gates, Keep a Changelog discipline, and a step-by-step runbook. `tools/release.py`
+  (`just release-prep`, `release-verify`, `release-notes`) bumps `plugin.json`, rotates the
+  CHANGELOG, and proves tag, version, and CHANGELOG agree; `.github/workflows/release.yml`
+  re-runs every gate on a `v*` tag and publishes the GitHub Release from the CHANGELOG
+  section (`-rc.N` tags become pre-releases). `v0.1.0` and `v0.2.0` are tagged
+  retroactively.
+- **Contributor guidance for humans and agents.** `CONTRIBUTING.md` is rewritten around the
+  workflow (branches, Conventional Commits, pull-request checklist, review) and maps every
+  invariant to the test that enforces it. `AGENTS.md` gives AI coding agents the same rules as
+  operating instructions (`CLAUDE.md` imports it). New pull-request and issue templates and a
+  `SECURITY.md`.
 
 ### Fixed
 

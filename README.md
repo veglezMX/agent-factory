@@ -34,9 +34,12 @@ agents/ skills/ commands/   plugin component dirs (Claude Code format) — GENER
 process/             the spine: roster, invocation contract, handoff protocol, playbooks/
 templates/           the Stakeholder Input Packet template
 runs/                per-run workspaces — the live state store (packet, requirements, gates, handoffs)
-scripts/             install.sh — install/convert the roster for your platform
+scripts/             install.sh — install/convert the roster + framework docs for your platform
+tools/ tests/        release and version-gate tooling, and the invariant test suite (dev-only)
+docs/RELEASING.md    versioning, branches, gates, and the release runbook
 PORTABILITY.md       per-platform setup, directory map, tool-posture mapping
-CONTRIBUTING.md      the source-of-truth rule and how to add an agent, skill, playbook, or case
+CONTRIBUTING.md      how humans contribute: source-of-truth rule, workflow, invariants
+AGENTS.md            the same rules as operating instructions for AI coding agents
 ```
 
 **`.github/` is the source of truth** — agents, skills, and commands. Every other directory above marked GENERATED is derived from it. After editing anything under `.github/`, regenerate them all with one command:
@@ -174,6 +177,19 @@ Name map: the GitHub repo is `agent-factory` (the `repo` field); the marketplace
 
 ---
 
+## Versions & releases
+
+Releases follow [Semantic Versioning](https://semver.org/) and are cut from `main` as `vX.Y.Z` tags, each with a GitHub Release whose notes are the matching [`CHANGELOG.md`](CHANGELOG.md) section. The project is pre-1.0: a **minor** release may change the roster, playbooks, skills, commands, or a contract; a **patch** release only fixes. Pin one:
+
+```bash
+/plugin marketplace add veglezMX/agent-factory@v0.3.0                 # Claude Code plugin
+git checkout v0.3.0 && scripts/install.sh --target <platform>          # any platform
+```
+
+How releases are made, and what counts as a breaking change: [`docs/RELEASING.md`](docs/RELEASING.md).
+
+---
+
 ## Extending it
 
-Adding an agent or a case is a drop-in — see the conformance rules in [`process/agent-roster.md`](process/agent-roster.md), [`process/agent-invocation-contract.md`](process/agent-invocation-contract.md), [`process/playbooks/playbook-schema.md`](process/playbooks/playbook-schema.md), and the handoff [conformance checklist](process/agent-handoff-protocol.md). Agents follow the component structure of the `prompt-anatomy` skill ([`veglezMX/veglez-skills`](https://github.com/veglezMX/veglez-skills), an authoring-time dependency); mirror an existing sibling of the same tool posture. The test suite (`tests/`) checks the mechanical rules on every pull request — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions are welcome — read [CONTRIBUTING.md](CONTRIBUTING.md) (humans) or [AGENTS.md](AGENTS.md) (AI coding agents) first. Adding an agent or a case is a drop-in — see the conformance rules in [`process/agent-roster.md`](process/agent-roster.md), [`process/agent-invocation-contract.md`](process/agent-invocation-contract.md), [`process/playbooks/playbook-schema.md`](process/playbooks/playbook-schema.md), and the handoff [conformance checklist](process/agent-handoff-protocol.md). Agents follow the component structure of the `prompt-anatomy` skill ([`veglezMX/veglez-skills`](https://github.com/veglezMX/veglez-skills), an authoring-time dependency); mirror an existing sibling of the same tool posture. The test suite (`tests/`) checks the mechanical rules on every pull request — see [CONTRIBUTING.md](CONTRIBUTING.md).
